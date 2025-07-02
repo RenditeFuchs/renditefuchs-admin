@@ -6,7 +6,13 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')
+    # Automatische Settings-Auswahl basierend auf Environment
+    if os.path.exists('/var/www/admin'):
+        # Production server environment
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings_production')
+    else:
+        # Local development environment
+        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings_local')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

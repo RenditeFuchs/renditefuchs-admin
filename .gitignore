@@ -36,6 +36,10 @@ staticfiles/
 .env.production
 .env.test
 
+# Local development settings - NEVER push to server!
+admin_panel/settings_local.py
+admin_db_local.sqlite3
+
 # Virtual Environment
 venv/
 env/
