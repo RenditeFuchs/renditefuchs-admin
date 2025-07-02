@@ -22,6 +22,7 @@ import logging
 logger = logging.getLogger('monitoring')
 
 
+@login_required
 def dashboard_home(request):
     """Main dashboard overview"""
     # Get all platforms with latest health status, grouped by environment
@@ -252,6 +253,7 @@ def perform_health_check(platform):
         }
 
 
+@login_required
 def errors_list(request):
     """List all errors with filtering"""
     errors = ErrorLog.objects.select_related('platform').order_by('-last_seen')
@@ -291,6 +293,7 @@ def errors_list(request):
     return render(request, 'monitoring/errors_list.html', context)
 
 
+@login_required
 def alerts_list(request):
     """List all alerts"""
     alerts = Alert.objects.select_related('platform').order_by('-created_at')
@@ -313,6 +316,7 @@ def alerts_list(request):
     return render(request, 'monitoring/alerts_list.html', context)
 
 
+@login_required
 def platform_detail(request, platform_id):
     """Detailed view for a specific platform"""
     platform = Platform.objects.get(id=platform_id)
@@ -438,6 +442,7 @@ def get_status_class(status):
     return status_classes.get(status, 'secondary')
 
 
+@login_required  
 def alerts_list(request):
     """List all alerts with filtering"""
     # Get filter parameters
@@ -522,6 +527,7 @@ def calculate_avg_resolution_time():
     return 0
 
 
+@login_required
 def settings_view(request):
     """Monitoring settings management"""
     if request.method == 'POST':
@@ -549,6 +555,7 @@ def settings_view(request):
     return render(request, 'monitoring/settings.html', context)
 
 
+@login_required
 def system_status_view(request):
     """System status overview"""
     import psutil
@@ -593,6 +600,7 @@ def system_status_view(request):
     return render(request, 'monitoring/system_status.html', context)
 
 
+@login_required
 def user_management_view(request):
     """User management overview"""
     from django.contrib.auth.models import User, Group
@@ -624,6 +632,7 @@ def user_management_view(request):
     return render(request, 'monitoring/user_management.html', context)
 
 
+@login_required
 def database_status_view(request):
     """Database status and statistics"""
     from django.db import connection, connections
@@ -675,6 +684,7 @@ def database_status_view(request):
     return render(request, 'monitoring/database_status.html', context)
 
 
+@login_required
 def server_status_view(request):
     """Server status and performance metrics"""
     import psutil

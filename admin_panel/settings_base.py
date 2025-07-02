@@ -82,6 +82,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ADMIN_DASHBOARD_TITLE = 'RenditeFuchs Admin Dashboard'
 ADMIN_SITE_HEADER = 'RenditeFuchs Platform Administration'
 
+# Authentication Settings
+LOGIN_URL = '/django-admin/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/django-admin/login/'
+
 # Logging Configuration
 LOGGING = {
     'version': 1,

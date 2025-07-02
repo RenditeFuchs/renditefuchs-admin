@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.db.models import Sum, Count, Q, Avg
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from datetime import timedelta, date
 from decimal import Decimal
 import csv
@@ -15,6 +16,7 @@ from .models import (
 )
 
 
+@login_required
 def business_dashboard(request):
     """Main business dashboard with key metrics"""
     # Calculate date ranges
@@ -93,6 +95,7 @@ def business_dashboard(request):
     return render(request, 'business/dashboard.html', context)
 
 
+@login_required
 def pricing_plans_list(request):
     """List and manage pricing plans"""
     plans = PricingPlan.objects.annotate(
@@ -109,6 +112,7 @@ def pricing_plans_list(request):
     return render(request, 'business/pricing_plans.html', context)
 
 
+@login_required
 def pricing_plan_create(request):
     """Create a new pricing plan"""
     from .forms import PricingPlanForm
@@ -130,6 +134,7 @@ def pricing_plan_create(request):
     return render(request, 'business/pricing_plan_form.html', context)
 
 
+@login_required
 def pricing_plan_edit(request, plan_id):
     """Edit an existing pricing plan"""
     from .forms import PricingPlanForm
@@ -154,6 +159,7 @@ def pricing_plan_edit(request, plan_id):
     return render(request, 'business/pricing_plan_form.html', context)
 
 
+@login_required
 def pricing_plan_delete(request, plan_id):
     """Delete a pricing plan"""
     plan = get_object_or_404(PricingPlan, id=plan_id)
@@ -179,6 +185,7 @@ def pricing_plan_delete(request, plan_id):
     return render(request, 'business/pricing_plan_delete.html', context)
 
 
+@login_required
 def customers_list(request):
     """List all customers with filtering and search"""
     customers = Customer.objects.select_related('user').annotate(
@@ -228,6 +235,7 @@ def customers_list(request):
     return render(request, 'business/customers.html', context)
 
 
+@login_required
 def subscriptions_list(request):
     """List all subscriptions with filtering"""
     subscriptions = Subscription.objects.select_related(
@@ -273,6 +281,7 @@ def subscriptions_list(request):
     return render(request, 'business/subscriptions.html', context)
 
 
+@login_required
 def invoices_list(request):
     """List all invoices with filtering"""
     invoices = Invoice.objects.select_related(
@@ -320,6 +329,7 @@ def invoices_list(request):
     return render(request, 'business/invoices.html', context)
 
 
+@login_required
 def invoice_create(request):
     """Create a new invoice"""
     from .forms import InvoiceForm, InvoiceLineItemFormSet
@@ -348,6 +358,7 @@ def invoice_create(request):
     return render(request, 'business/invoice_form.html', context)
 
 
+@login_required
 def invoice_detail(request, invoice_id):
     """View invoice details"""
     invoice = get_object_or_404(Invoice, id=invoice_id)
@@ -421,6 +432,7 @@ def invoice_send(request, invoice_id):
     return render(request, 'business/invoice_send_confirm.html', context)
 
 
+@login_required
 def invoice_mark_paid(request, invoice_id):
     """Mark invoice as paid"""
     invoice = get_object_or_404(Invoice, id=invoice_id)
@@ -449,6 +461,7 @@ def invoice_mark_paid(request, invoice_id):
     return render(request, 'business/invoice_mark_paid.html', context)
 
 
+@login_required
 def revenue_analytics(request):
     """Revenue analytics and reporting with export functionality"""
     # Get date range from request or default to last 12 months
