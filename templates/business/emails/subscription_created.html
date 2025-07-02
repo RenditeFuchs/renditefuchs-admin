@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Willkommen bei RenditeFuchs</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #FF6B35, #E55A2B);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #ffffff;
+            padding: 30px;
+            border: 1px solid #e9ecef;
+            border-top: none;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background: #FF6B35;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+        .plan-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .plan-feature {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .plan-feature::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎉 Willkommen bei RenditeFuchs!</h1>
+        <p>Ihr {{ plan.name }} Abonnement wurde erfolgreich erstellt</p>
+    </div>
+    
+    <div class="content">
+        <p>Hallo {{ customer.get_display_name }},</p>
+        
+        <p>vielen Dank für Ihr Vertrauen! Ihr {{ plan.name }} Abonnement wurde erfolgreich eingerichtet und Sie können sofort loslegen.</p>
+        
+        <div class="plan-details">
+            <h3>{{ plan.name }} - {{ plan.get_price_display }}</h3>
+            <p><strong>Abrechnung:</strong> {{ plan.get_billing_cycle_display }}</p>
+            
+            {% if subscription.trial_end %}
+            <p><strong>Testphase bis:</strong> {{ subscription.trial_end|date:"d.m.Y" }}</p>
+            {% endif %}
+            
+            {% if plan.features %}
+            <h4>Ihre Features:</h4>
+            {% for feature in plan.features %}
+            <div class="plan-feature">{{ feature }}</div>
+            {% endfor %}
+            {% endif %}
+            
+            <div style="margin-top: 15px;">
+                <strong>Ressourcen:</strong>
+                <ul style="margin: 10px 0;">
+                    <li>{{ plan.max_users }} Benutzer</li>
+                    <li>{{ plan.max_projects }} Projekte</li>
+                    <li>{{ plan.storage_gb }}GB Speicher</li>
+                </ul>
+            </div>
+        </div>
+        
+        <p>Sie können Ihr Abonnement jederzeit in Ihrem Account-Bereich verwalten:</p>
+        
+        <div style="text-align: center;">
+            <a href="https://renditefuchs.de/account/" class="button">
+                Zum Account-Bereich
+            </a>
+        </div>
+        
+        <p>Bei Fragen oder Problemen stehen wir Ihnen gerne zur Verfügung. Antworten Sie einfach auf diese E-Mail oder kontaktieren Sie unseren Support.</p>
+        
+        <p>Viel Erfolg mit RenditeFuchs!</p>
+        
+        <p>
+            Beste Grüße<br>
+            Ihr RenditeFuchs Team
+        </p>
+    </div>
+    
+    <div class="footer">
+        <p>
+            RenditeFuchs - Intelligente Finanzanalyse<br>
+            <a href="https://renditefuchs.de">renditefuchs.de</a> | 
+            <a href="mailto:support@renditefuchs.de">support@renditefuchs.de</a>
+        </p>
+        <p>
+            <small>
+                Diese E-Mail wurde automatisch generiert. Bei Fragen antworten Sie bitte direkt auf diese E-Mail.
+            </small>
+        </p>
+    </div>
+</body>
+</html>

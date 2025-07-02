@@ -1,0 +1,370 @@
+{% extends 'base/admin_base.html' %}
+{% load static %}
+
+{% block title %}Abonnements Verwaltung{% endblock %}
+
+{% block extra_css %}
+<style>
+    .subscription-filters {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .subscription-table {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .table-header {
+        background: var(--rf-bg-secondary);
+        color: var(--rf-text-primary);
+        padding: 1rem;
+        font-weight: 600;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .subscription-row {
+        padding: 1rem;
+        border-bottom: 1px solid var(--rf-border);
+        display: flex;
+        align-items: center;
+        transition: background-color 0.2s ease;
+    }
+    
+    .subscription-row:hover {
+        background: rgba(255, 107, 53, 0.05);
+    }
+    
+    .subscription-row:last-child {
+        border-bottom: none;
+    }
+    
+    .subscription-info {
+        flex: 1;
+    }
+    
+    .customer-name {
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .customer-email {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .plan-info {
+        min-width: 200px;
+        margin-right: 1rem;
+    }
+    
+    .plan-name {
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .plan-price {
+        color: var(--rf-primary);
+        font-weight: 500;
+    }
+    
+    /* Status badges defined in admin_base.html */
+    
+    .subscription-dates {
+        text-align: center;
+        min-width: 120px;
+        margin-right: 1rem;
+    }
+    
+    .date-label {
+        font-size: 0.75rem;
+        color: var(--rf-text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    
+    .date-value {
+        font-size: 0.9rem;
+        color: var(--rf-text-primary);
+    }
+    
+    .mrr-display {
+        text-align: center;
+        min-width: 100px;
+        margin-right: 1rem;
+    }
+    
+    .mrr-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--rf-primary);
+    }
+    
+    .mrr-label {
+        font-size: 0.75rem;
+        color: var(--rf-text-secondary);
+    }
+    
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .summary-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .summary-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: var(--rf-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .summary-label {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .pagination-wrapper {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-top: none;
+        padding: 1rem;
+        border-radius: 0 0 8px 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Abonnements Verwaltung</h1>
+    <div class="btn-group" role="group">
+        <a href="{% url 'business:dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+        <a href="{% url 'business:customers' %}" class="btn btn-outline-primary">Kunden</a>
+        <a href="{% url 'business:pricing_plans' %}" class="btn btn-outline-primary">Preispläne</a>
+        <a href="{% url 'business:analytics' %}" class="btn btn-outline-primary">Analytics</a>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="summary-stats">
+    <div class="summary-card">
+        <div class="summary-value">{{ subscription_stats.total }}</div>
+        <div class="summary-label">Abonnements gesamt</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value">{{ subscription_stats.active }}</div>
+        <div class="summary-label">Aktiv</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value">{{ subscription_stats.trial }}</div>
+        <div class="summary-label">Testphase</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value">{{ subscription_stats.canceled }}</div>
+        <div class="summary-label">Gekündigt</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value">€{{ subscription_stats.revenue_monthly|floatformat:0 }}</div>
+        <div class="summary-label">MRR</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="subscription-filters">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">Alle Status</option>
+                <option value="trial" {% if current_filters.status == 'trial' %}selected{% endif %}>
+                    Testphase
+                </option>
+                <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>
+                    Aktiv
+                </option>
+                <option value="past_due" {% if current_filters.status == 'past_due' %}selected{% endif %}>
+                    Überfällig
+                </option>
+                <option value="canceled" {% if current_filters.status == 'canceled' %}selected{% endif %}>
+                    Gekündigt
+                </option>
+                <option value="suspended" {% if current_filters.status == 'suspended' %}selected{% endif %}>
+                    Gesperrt
+                </option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="plan" class="form-label">Preisplan</label>
+            <select class="form-select" id="plan" name="plan">
+                <option value="">Alle Pläne</option>
+                {% for plan in plans %}
+                <option value="{{ plan.id }}" {% if current_filters.plan == plan.id|stringformat:"s" %}selected{% endif %}>
+                    {{ plan.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary me-2">
+                <i class="fas fa-filter"></i> Filtern
+            </button>
+            <a href="{% url 'business:subscriptions' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times"></i> Zurücksetzen
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Subscriptions Table -->
+<div class="subscription-table">
+    <div class="table-header">
+        Abonnements ({{ page_obj.paginator.count }} gefunden)
+    </div>
+    
+    {% for subscription in page_obj %}
+    <div class="subscription-row">
+        <div class="subscription-info">
+            <div class="customer-name">{{ subscription.customer.get_display_name }}</div>
+            <div class="customer-email">{{ subscription.customer.user.email }}</div>
+        </div>
+        
+        <div class="plan-info">
+            <div class="plan-name">{{ subscription.plan.name }}</div>
+            <div class="plan-price">€{{ subscription.get_effective_price|floatformat:2 }}/{{ subscription.plan.get_billing_cycle_display }}</div>
+        </div>
+        
+        <div class="subscription-dates">
+            <div class="date-label">Gestartet</div>
+            <div class="date-value">{{ subscription.start_date|date:"d.m.Y" }}</div>
+        </div>
+        
+        {% if subscription.next_billing_date %}
+        <div class="subscription-dates">
+            <div class="date-label">Nächste Zahlung</div>
+            <div class="date-value">{{ subscription.next_billing_date|date:"d.m.Y" }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="mrr-display">
+            <div class="mrr-value">
+                €{% if subscription.plan.billing_cycle == 'monthly' %}{{ subscription.get_effective_price|floatformat:0 }}{% elif subscription.plan.billing_cycle == 'quarterly' %}{{ subscription.get_effective_price|floatformat:0|div:3 }}{% elif subscription.plan.billing_cycle == 'yearly' %}{{ subscription.get_effective_price|floatformat:0|div:12 }}{% else %}0{% endif %}
+            </div>
+            <div class="mrr-label">MRR</div>
+        </div>
+        
+        <div class="status-badge status-{{ subscription.status }}">
+            {{ subscription.get_status_display }}
+        </div>
+        
+        <div class="ms-3">
+            <div class="btn-group" role="group">
+                <button class="btn btn-sm btn-outline-primary" 
+                        onclick="viewSubscription({{ subscription.id }})">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" 
+                        onclick="editSubscription({{ subscription.id }})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                {% if subscription.is_active %}
+                <button class="btn btn-sm btn-outline-warning" 
+                        onclick="cancelSubscription({{ subscription.id }})">
+                    <i class="fas fa-times"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="subscription-row">
+        <div class="text-center w-100 py-4">
+            <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Keine Abonnements gefunden</h5>
+            <p class="text-muted">
+                {% if current_filters.status or current_filters.plan %}
+                    Versuchen Sie andere Filterkriterien oder setzen Sie den Filter zurück.
+                {% else %}
+                    Sobald Kunden Abonnements abschließen, erscheinen sie hier.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="pagination-wrapper">
+    <nav aria-label="Abonnements Navigation">
+        <ul class="pagination justify-content-center mb-0">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.plan %}&plan={{ current_filters.plan }}{% endif %}">
+                        Erste
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.plan %}&plan={{ current_filters.plan }}{% endif %}">
+                        Zurück
+                    </a>
+                </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">
+                    Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                </span>
+            </li>
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.plan %}&plan={{ current_filters.plan }}{% endif %}">
+                        Weiter
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.plan %}&plan={{ current_filters.plan }}{% endif %}">
+                        Letzte
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewSubscription(subscriptionId) {
+    window.open(`/django-admin/business/subscription/${subscriptionId}/change/`, '_blank');
+}
+
+function editSubscription(subscriptionId) {
+    window.open(`/django-admin/business/subscription/${subscriptionId}/change/`, '_blank');
+}
+
+function cancelSubscription(subscriptionId) {
+    if (confirm('Möchten Sie dieses Abonnement wirklich kündigen?')) {
+        // Would implement AJAX call to cancel subscription
+        alert('Abonnement-Kündigung wird in einer zukünftigen Version implementiert.');
+    }
+}
+</script>
+{% endblock %}

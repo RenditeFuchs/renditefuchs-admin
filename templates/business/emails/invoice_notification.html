@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechnung {{ invoice.invoice_number }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #FF6B35, #E55A2B);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #ffffff;
+            padding: 30px;
+            border: 1px solid #e9ecef;
+            border-top: none;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .button {
+            display: inline-block;
+            background: #FF6B35;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 20px 0;
+        }
+        .invoice-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .invoice-table th,
+        .invoice-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .invoice-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .total-row {
+            font-weight: bold;
+            font-size: 1.1em;
+            background: #e9ecef;
+        }
+        .due-date {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📄 Neue Rechnung</h1>
+        <p>Rechnung {{ invoice.invoice_number }}</p>
+    </div>
+    
+    <div class="content">
+        <p>Hallo {{ customer.get_display_name }},</p>
+        
+        <p>Sie haben eine neue Rechnung für Ihr RenditeFuchs Abonnement erhalten.</p>
+        
+        <div class="invoice-details">
+            <h3>Rechnungsdetails</h3>
+            <p><strong>Rechnungsnummer:</strong> {{ invoice.invoice_number }}</p>
+            <p><strong>Ausstellungsdatum:</strong> {{ invoice.issue_date|date:"d.m.Y" }}</p>
+            <p><strong>Fälligkeitsdatum:</strong> {{ invoice.due_date|date:"d.m.Y" }}</p>
+        </div>
+        
+        <div class="due-date">
+            <strong>⏰ Zahlbar bis:</strong> {{ invoice.due_date|date:"d.m.Y" }}
+        </div>
+        
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Beschreibung</th>
+                    <th>Menge</th>
+                    <th>Einzelpreis</th>
+                    <th>Gesamt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in line_items %}
+                <tr>
+                    <td>
+                        {{ item.description }}
+                        {% if item.period_start and item.period_end %}
+                        <br><small class="text-muted">
+                            Zeitraum: {{ item.period_start|date:"d.m.Y" }} - {{ item.period_end|date:"d.m.Y" }}
+                        </small>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.quantity }}</td>
+                    <td>€{{ item.unit_price|floatformat:2 }}</td>
+                    <td>€{{ item.total_price|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                
+                <tr>
+                    <td colspan="3"><strong>Zwischensumme:</strong></td>
+                    <td><strong>€{{ invoice.subtotal|floatformat:2 }}</strong></td>
+                </tr>
+                
+                {% if invoice.tax_amount > 0 %}
+                <tr>
+                    <td colspan="3">MwSt. ({{ invoice.tax_rate }}%):</td>
+                    <td>€{{ invoice.tax_amount|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+                
+                <tr class="total-row">
+                    <td colspan="3"><strong>Gesamtbetrag:</strong></td>
+                    <td><strong>€{{ invoice.total_amount|floatformat:2 }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <p>Die Zahlung erfolgt automatisch über Ihre hinterlegte Zahlungsmethode. Sie erhalten eine Bestätigung, sobald die Zahlung verarbeitet wurde.</p>
+        
+        <div style="text-align: center;">
+            <a href="https://renditefuchs.de/account/invoices/" class="button">
+                Rechnung herunterladen
+            </a>
+        </div>
+        
+        <p>Bei Fragen zu dieser Rechnung können Sie sich jederzeit an unseren Support wenden.</p>
+        
+        <p>
+            Vielen Dank für Ihr Vertrauen!<br>
+            Ihr RenditeFuchs Team
+        </p>
+    </div>
+    
+    <div class="footer">
+        <p>
+            RenditeFuchs - Intelligente Finanzanalyse<br>
+            <a href="https://renditefuchs.de">renditefuchs.de</a> | 
+            <a href="mailto:billing@renditefuchs.de">billing@renditefuchs.de</a>
+        </p>
+        <p>
+            <small>
+                Diese Rechnung wurde automatisch generiert. Bei Fragen antworten Sie bitte direkt auf diese E-Mail.
+            </small>
+        </p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,537 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}Serverstatus - RenditeFuchs Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .server-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px var(--rf-shadow);
+    }
+    
+    .server-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .server-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+    
+    .server-icon.network { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .server-icon.process { background: linear-gradient(135deg, #f093fb, #f5576c); }
+    .server-icon.disk { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .server-icon.performance { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+    
+    .server-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        margin: 0;
+    }
+    
+    .server-subtitle {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .metric-item {
+        text-align: center;
+        padding: 1.5rem;
+        background: var(--rf-bg-secondary);
+        border-radius: 8px;
+        transition: transform 0.2s ease;
+    }
+    
+    .metric-item:hover {
+        transform: translateY(-2px);
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-hover));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .metric-label {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .network-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+    
+    .network-table th,
+    .network-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .network-table th {
+        background: var(--rf-bg-secondary);
+        font-weight: 600;
+        color: var(--rf-text-primary);
+    }
+    
+    .network-table td {
+        color: var(--rf-text-secondary);
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
+    
+    .network-table tbody tr:hover {
+        background: rgba(255, 107, 53, 0.05);
+    }
+    
+    .disk-item {
+        background: var(--rf-bg-secondary);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .disk-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--rf-shadow);
+    }
+    
+    .disk-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .disk-device {
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        font-family: monospace;
+    }
+    
+    .disk-type {
+        background: rgba(255, 107, 53, 0.1);
+        color: var(--rf-primary);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .disk-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .disk-stat {
+        text-align: center;
+    }
+    
+    .disk-stat-value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+    }
+    
+    .disk-stat-label {
+        font-size: 0.75rem;
+        color: var(--rf-text-secondary);
+        text-transform: uppercase;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--rf-bg-primary);
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid var(--rf-border);
+    }
+    
+    .progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+    
+    .progress-low { background: #10b981; }
+    .progress-medium { background: #f59e0b; }
+    .progress-high { background: #ef4444; }
+    
+    .load-average {
+        display: flex;
+        justify-content: space-around;
+        background: var(--rf-bg-secondary);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .load-item {
+        text-align: center;
+    }
+    
+    .load-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--rf-primary);
+        font-family: monospace;
+    }
+    
+    .load-label {
+        font-size: 0.8rem;
+        color: var(--rf-text-secondary);
+        margin-top: 0.25rem;
+    }
+    
+    .refresh-indicator {
+        position: fixed;
+        top: 20px;
+        right: 80px;
+        background: var(--rf-primary);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+    }
+    
+    .refresh-indicator.show {
+        opacity: 1;
+    }
+    
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    .no-data {
+        text-align: center;
+        padding: 3rem;
+        color: var(--rf-text-secondary);
+    }
+    
+    .no-data i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Refresh Indicator -->
+    <div class="refresh-indicator" id="refreshIndicator">
+        <i class="fas fa-sync fa-spin me-2"></i>Daten werden aktualisiert...
+    </div>
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Serverstatus</h1>
+            <p class="text-muted">Detaillierte Server-Performance und Ressourcen-Überwachung</p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                Server Online
+            </div>
+            <button onclick="refreshData()" class="btn btn-outline-primary">
+                <i class="fas fa-sync me-2"></i>Aktualisieren
+            </button>
+            <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Process Information -->
+    <div class="server-card">
+        <div class="server-header">
+            <div class="server-icon process">
+                <i class="fas fa-cogs"></i>
+            </div>
+            <div>
+                <h3 class="server-title">Prozess-Information</h3>
+                <p class="server-subtitle">System-Prozesse und CPU-Auslastung</p>
+            </div>
+        </div>
+        
+        <div class="metric-grid">
+            <div class="metric-item">
+                <div class="metric-value">{{ process_info.total_processes }}</div>
+                <div class="metric-label">Prozesse gesamt</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">{{ process_info.running_processes }}</div>
+                <div class="metric-label">Laufende Prozesse</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">{{ process_info.cpu_count }}</div>
+                <div class="metric-label">CPU Kerne</div>
+            </div>
+        </div>
+        
+        <!-- Load Average -->
+        <div class="load-average">
+            <div class="load-item">
+                <div class="load-value">{{ process_info.load_average.0|floatformat:2 }}</div>
+                <div class="load-label">1 Minute</div>
+            </div>
+            <div class="load-item">
+                <div class="load-value">{{ process_info.load_average.1|floatformat:2 }}</div>
+                <div class="load-label">5 Minuten</div>
+            </div>
+            <div class="load-item">
+                <div class="load-value">{{ process_info.load_average.2|floatformat:2 }}</div>
+                <div class="load-label">15 Minuten</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Information -->
+    <div class="server-card">
+        <div class="server-header">
+            <div class="server-icon network">
+                <i class="fas fa-network-wired"></i>
+            </div>
+            <div>
+                <h3 class="server-title">Netzwerk-Schnittstellen</h3>
+                <p class="server-subtitle">Aktive Netzwerkverbindungen</p>
+            </div>
+        </div>
+        
+        {% if network_info %}
+            <table class="network-table">
+                <thead>
+                    <tr>
+                        <th>Interface</th>
+                        <th>IP-Adresse</th>
+                        <th>Netzmaske</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for interface in network_info %}
+                    <tr>
+                        <td><strong>{{ interface.interface }}</strong></td>
+                        <td>{{ interface.ip }}</td>
+                        <td>{{ interface.netmask }}</td>
+                        <td>
+                            <span class="status-indicator">
+                                <span class="status-dot"></span>
+                                Aktiv
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="no-data">
+                <i class="fas fa-network-wired"></i>
+                <p>Keine Netzwerk-Informationen verfügbar</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Disk Information -->
+    <div class="server-card">
+        <div class="server-header">
+            <div class="server-icon disk">
+                <i class="fas fa-hdd"></i>
+            </div>
+            <div>
+                <h3 class="server-title">Festplatten-Status</h3>
+                <p class="server-subtitle">Speicherplatz und Partitions-Übersicht</p>
+            </div>
+        </div>
+        
+        {% if disk_info %}
+            {% for disk in disk_info %}
+            <div class="disk-item">
+                <div class="disk-header">
+                    <div>
+                        <div class="disk-device">{{ disk.device }}</div>
+                        <small class="text-muted">{{ disk.mountpoint }}</small>
+                    </div>
+                    <div class="disk-type">{{ disk.fstype|default:"Unknown" }}</div>
+                </div>
+                
+                <div class="disk-info">
+                    <div class="disk-stat">
+                        <div class="disk-stat-value">{{ disk.total|filesizeformat }}</div>
+                        <div class="disk-stat-label">Gesamt</div>
+                    </div>
+                    <div class="disk-stat">
+                        <div class="disk-stat-value">{{ disk.used|filesizeformat }}</div>
+                        <div class="disk-stat-label">Belegt</div>
+                    </div>
+                    <div class="disk-stat">
+                        <div class="disk-stat-value">{{ disk.free|filesizeformat }}</div>
+                        <div class="disk-stat-label">Frei</div>
+                    </div>
+                    <div class="disk-stat">
+                        <div class="disk-stat-value">{{ disk.percent|floatformat:1 }}%</div>
+                        <div class="disk-stat-label">Verbraucht</div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill {% if disk.percent < 70 %}progress-low{% elif disk.percent < 90 %}progress-medium{% else %}progress-high{% endif %}" 
+                         style="width: {{ disk.percent }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-data">
+                <i class="fas fa-hdd"></i>
+                <p>Keine Festplatten-Informationen verfügbar</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Performance Overview -->
+    <div class="server-card">
+        <div class="server-header">
+            <div class="server-icon performance">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div>
+                <h3 class="server-title">Performance-Übersicht</h3>
+                <p class="server-subtitle">Zusammenfassung der Server-Leistung</p>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="metric-item">
+                    <div class="metric-value">
+                        {% if process_info.load_average.0 < 1 %}Niedrig{% elif process_info.load_average.0 < 2 %}Mittel{% else %}Hoch{% endif %}
+                    </div>
+                    <div class="metric-label">CPU-Last</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-item">
+                    <div class="metric-value">{{ network_info|length }}</div>
+                    <div class="metric-label">Netzwerk-Interfaces</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-item">
+                    <div class="metric-value">{{ disk_info|length }}</div>
+                    <div class="metric-label">Partitionen</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3 text-center">
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                Detaillierte Performance-Graphen werden in einer zukünftigen Version hinzugefügt
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshData() {
+    const indicator = document.getElementById('refreshIndicator');
+    const button = document.querySelector('[onclick="refreshData()"]');
+    const icon = button.querySelector('i');
+    
+    // Show indicators
+    indicator.classList.add('show');
+    icon.className = 'fas fa-spinner fa-spin me-2';
+    button.disabled = true;
+    
+    // Refresh page after a short delay
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
+}
+
+// Auto-refresh every 60 seconds
+setInterval(() => {
+    const indicator = document.getElementById('refreshIndicator');
+    indicator.classList.add('show');
+    
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
+}, 60000);
+
+// Show refresh indicator briefly on load
+document.addEventListener('DOMContentLoaded', function() {
+    const indicator = document.getElementById('refreshIndicator');
+    setTimeout(() => {
+        indicator.classList.add('show');
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    }, 500);
+});
+</script>
+{% endblock %}

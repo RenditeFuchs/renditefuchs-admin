@@ -1,0 +1,642 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}Fehlerüberwachung - RenditeFuchs Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .error-hero {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border-radius: 20px;
+        color: white;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .error-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50%, -50%);
+    }
+    
+    .error-stats {
+        position: relative;
+        z-index: 2;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        display: inline-block;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: none;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .filter-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        padding: 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .modern-select {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .modern-select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .filter-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        color: white;
+    }
+    
+    .error-table-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .error-item {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .error-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-color: #cbd5e1;
+    }
+    
+    .error-item.critical::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, #ef4444, #dc2626);
+        border-radius: 0 4px 4px 0;
+    }
+    
+    .error-item.high::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, #f59e0b, #d97706);
+        border-radius: 0 4px 4px 0;
+    }
+    
+    .error-item.medium::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, #3b82f6, #2563eb);
+        border-radius: 0 4px 4px 0;
+    }
+    
+    .error-item.low::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, #64748b, #475569);
+        border-radius: 0 4px 4px 0;
+    }
+    
+    .severity-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .severity-critical {
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        color: #dc2626;
+        border: 1px solid #fecaca;
+    }
+    
+    .severity-high {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #d97706;
+        border: 1px solid #fde68a;
+    }
+    
+    .severity-medium {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #2563eb;
+        border: 1px solid #bfdbfe;
+    }
+    
+    .severity-low {
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .error-type-badge {
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        color: #374151;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border: 1px solid #d1d5db;
+    }
+    
+    .count-badge {
+        background: linear-gradient(135deg, #dc2626, #b91c1c);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+    }
+    
+    .action-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+    
+    .action-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .action-button.success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    
+    .action-button.success:hover {
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+    
+    .platform-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .platform-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+    
+    .platform-dot.offline {
+        background: #ef4444;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+    }
+    
+    .empty-state {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border: 1px solid #bbf7d0;
+        border-radius: 16px;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+    
+    .modern-pagination {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-top: 2rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .page-link {
+        border: none;
+        border-radius: 8px;
+        margin: 0 0.25rem;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .page-link:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .page-item.active .page-link {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Modern Hero Section -->
+    <div class="error-hero">
+        <div class="d-flex justify-content-between align-items-center">
+            <div style="position: relative; z-index: 2;">
+                <h1 style="font-size: 2.5rem; font-weight: 300; margin-bottom: 0.5rem;">Fehlerüberwachung</h1>
+                <p style="font-size: 1.1rem; opacity: 0.9; margin-bottom: 0;">Real-time Monitoring aller Plattformen</p>
+            </div>
+            <div class="error-stats">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                {{ page_obj.paginator.count }} Fehler insgesamt
+            </div>
+        </div>
+    </div>
+    <!-- Modern Filters -->
+    <div class="filter-card">
+        <div class="filter-header">
+            <h5 class="mb-0 fw-bold">Fehler Filter</h5>
+        </div>
+        <div class="p-4">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="platform" class="form-label fw-medium">Plattform</label>
+                    <select name="platform" id="platform" class="modern-select w-100">
+                        <option value="">Alle Plattformen</option>
+                        {% for platform in platforms %}
+                        <option value="{{ platform.id }}" 
+                                {% if current_filters.platform == platform.id|stringformat:"s" %}selected{% endif %}>
+                            {{ platform.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="severity" class="form-label fw-medium">Schweregrad</label>
+                    <select name="severity" id="severity" class="modern-select w-100">
+                        <option value="">Alle Schweregrade</option>
+                        <option value="low" {% if current_filters.severity == 'low' %}selected{% endif %}>Niedrig</option>
+                        <option value="medium" {% if current_filters.severity == 'medium' %}selected{% endif %}>Mittel</option>
+                        <option value="high" {% if current_filters.severity == 'high' %}selected{% endif %}>Hoch</option>
+                        <option value="critical" {% if current_filters.severity == 'critical' %}selected{% endif %}>Kritisch</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label for="status" class="form-label fw-medium">Status</label>
+                    <select name="status" id="status" class="modern-select w-100">
+                        <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>Aktiv</option>
+                        <option value="resolved" {% if current_filters.status == 'resolved' %}selected{% endif %}>Gelöst</option>
+                        <option value="all" {% if current_filters.status == 'all' %}selected{% endif %}>Alle</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3 d-flex align-items-end gap-2">
+                    <button type="submit" class="filter-button">
+                        <i class="fas fa-filter me-2"></i>Filtern
+                    </button>
+                    <a href="{% url 'monitoring:errors_list' %}" class="filter-button" style="background: linear-gradient(135deg, #64748b 0%, #94a3b8 100%); text-decoration: none;">
+                        <i class="fas fa-times me-2"></i>Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Modern Error Cards -->
+    {% if page_obj %}
+    <div class="row">
+        <div class="col-12">
+            {% for error in page_obj %}
+            <div class="error-item {{ error.severity }}">
+                <div class="row align-items-center">
+                    <!-- Platform & Error Type -->
+                    <div class="col-md-3">
+                        <div class="platform-indicator">
+                            <span class="platform-dot {% if error.platform.health_checks.first.status == 'healthy' %}{% else %}offline{% endif %}"></span>
+                            {{ error.platform.name }}
+                        </div>
+                        <div class="mt-2">
+                            <span class="error-type-badge">{{ error.get_error_type_display }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Error Message -->
+                    <div class="col-md-4">
+                        <div class="fw-medium text-dark mb-1">{{ error.message|truncatechars:80 }}</div>
+                        {% if error.url_path %}
+                            <small class="text-muted">{{ error.url_path|truncatechars:50 }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Severity & Count -->
+                    <div class="col-md-2 text-center">
+                        <div class="severity-badge severity-{{ error.severity }}">{{ error.get_severity_display }}</div>
+                        {% if error.count > 1 %}
+                            <div class="mt-2">
+                                <span class="count-badge">{{ error.count }}x</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Timing -->
+                    <div class="col-md-2 text-center">
+                        <div class="fw-medium text-dark">{{ error.last_seen|timesince }} vor</div>
+                        <small class="text-muted">Zuerst: {{ error.first_seen|date:"d.m H:i" }}</small>
+                        {% if error.is_resolved %}
+                            <div class="mt-1">
+                                <span class="badge bg-success">Gelöst</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="col-md-1 text-end">
+                        <div class="d-flex flex-column gap-2">
+                            <button class="action-button" onclick="viewErrorDetails({{ error.id }})" title="Details anzeigen">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if not error.is_resolved %}
+                                <button class="action-button success" onclick="resolveError({{ error.id }})" title="Als gelöst markieren">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+                
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="card-footer bg-transparent">
+                    <nav aria-label="Error pagination">
+                        <ul class="pagination pagination-sm justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link text-primary" href="?page={{ page_obj.previous_page_number }}{% if current_filters.platform %}&platform={{ current_filters.platform }}{% endif %}{% if current_filters.severity %}&severity={{ current_filters.severity }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}">
+                                    Vorherige
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link bg-primary border-primary">
+                                    {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link text-primary" href="?page={{ page_obj.next_page_number }}{% if current_filters.platform %}&platform={{ current_filters.platform }}{% endif %}{% if current_filters.severity %}&severity={{ current_filters.severity }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}">
+                                    Nächste
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="card-body text-center text-muted py-5">
+                    <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                    <h5 class="text-primary">Keine Fehler gefunden</h5>
+                    <p class="text-muted">Keine Fehler entsprechen Ihren aktuellen Filtern.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Details Modal -->
+<div class="modal fade" id="errorDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-primary border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-primary">Fehlerdetails</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-primary" id="errorDetailsContent">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Theme-aware table styling */
+[data-theme="dark"] .table {
+    --bs-table-bg: var(--rf-bg-primary);
+    --bs-table-color: var(--rf-text-primary);
+}
+
+[data-theme="dark"] .table-light > :not(caption) > * > * {
+    background-color: var(--rf-bg-secondary);
+    color: var(--rf-text-primary);
+}
+
+[data-theme="dark"] .table-hover > tbody > tr:hover > * {
+    background-color: rgba(255, 107, 53, 0.1);
+}
+
+[data-theme="dark"] .form-select {
+    background-color: var(--rf-bg-primary);
+    border-color: var(--rf-border);
+    color: var(--rf-text-primary);
+}
+
+[data-theme="dark"] .form-select:focus {
+    border-color: var(--rf-primary);
+    box-shadow: 0 0 0 0.25rem rgba(255, 107, 53, 0.25);
+}
+
+[data-theme="dark"] .modal-content {
+    background-color: var(--rf-bg-primary);
+    border-color: var(--rf-border);
+}
+
+[data-theme="dark"] .modal-header {
+    border-color: var(--rf-border);
+}
+
+/* Ensure proper contrast for badges */
+.badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .badge.bg-secondary {
+    background-color: #495057 !important;
+    color: white !important;
+}
+
+/* Platform status dots with proper contrast */
+.platform-status.unknown {
+    background-color: var(--rf-text-secondary);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewErrorDetails(errorId) {
+    const modal = new bootstrap.Modal(document.getElementById('errorDetailsModal'));
+    const content = document.getElementById('errorDetailsContent');
+    
+    // Show loading
+    content.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Wird geladen...</div>';
+    modal.show();
+    
+    // Fetch error details (you'll need to implement this endpoint)
+    fetch(`/monitoring/api/error/${errorId}/`)
+        .then(response => response.json())
+        .then(data => {
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Grundlegende Informationen</h6>
+                        <table class="table table-sm">
+                            <tr><td class="text-muted">Plattform:</td><td class="text-primary">${data.platform}</td></tr>
+                            <tr><td class="text-muted">Typ:</td><td class="text-primary">${data.error_type}</td></tr>
+                            <tr><td class="text-muted">Schweregrad:</td><td><span class="badge bg-${data.severity}">${data.severity}</span></td></tr>
+                            <tr><td class="text-muted">Anzahl:</td><td class="text-primary">${data.count}x</td></tr>
+                            <tr><td class="text-muted">Zuerst gesehen:</td><td class="text-primary">${data.first_seen}</td></tr>
+                            <tr><td class="text-muted">Zuletzt gesehen:</td><td class="text-primary">${data.last_seen}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Anfrageinformationen</h6>
+                        <table class="table table-sm">
+                            <tr><td class="text-muted">URL:</td><td class="text-primary">${data.url_path || 'N/A'}</td></tr>
+                            <tr><td class="text-muted">IP:</td><td class="text-primary">${data.ip_address || 'N/A'}</td></tr>
+                            <tr><td class="text-muted">Benutzer-ID:</td><td class="text-primary">${data.user_id || 'Anonym'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-primary">Fehlermeldung</h6>
+                        <div class="alert alert-danger">
+                            <pre class="mb-0 text-danger">${data.message}</pre>
+                        </div>
+                    </div>
+                </div>
+                ${data.stack_trace ? `
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-primary">Stack-Trace</h6>
+                        <div class="alert alert-secondary">
+                            <pre class="mb-0 small text-secondary">${data.stack_trace}</pre>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        })
+        .catch(error => {
+            content.innerHTML = '<div class="alert alert-danger">Fehlerdetails konnten nicht geladen werden</div>';
+        });
+}
+
+function resolveError(errorId) {
+    if (!confirm('Diesen Fehler als gelöst markieren?')) return;
+    
+    fetch(`/monitoring/api/error/${errorId}/resolve/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast('Fehler als gelöst markiert', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('Fehler konnte nicht gelöst werden', 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Failed to resolve error', 'error');
+    });
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed`;
+    toast.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

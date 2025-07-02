@@ -1,0 +1,351 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}Systemzustand - RenditeFuchs Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px var(--rf-shadow);
+        transition: all 0.3s ease;
+    }
+    
+    .status-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--rf-shadow);
+    }
+    
+    .status-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .status-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+    
+    .status-icon.cpu { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .status-icon.memory { background: linear-gradient(135deg, #f093fb, #f5576c); }
+    .status-icon.disk { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+    .status-icon.app { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+    
+    .status-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        margin: 0;
+    }
+    
+    .status-subtitle {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .metric-item {
+        text-align: center;
+        padding: 1rem;
+        background: var(--rf-bg-secondary);
+        border-radius: 8px;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-hover));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .metric-label {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--rf-bg-secondary);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .progress-low { background: #10b981; }
+    .progress-medium { background: #f59e0b; }
+    .progress-high { background: #ef4444; }
+    
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .info-table th,
+    .info-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .info-table th {
+        background: var(--rf-bg-secondary);
+        font-weight: 600;
+        color: var(--rf-text-primary);
+    }
+    
+    .info-table td {
+        color: var(--rf-text-secondary);
+    }
+    
+    .uptime-display {
+        font-family: 'Courier New', monospace;
+        font-size: 1.2rem;
+        color: var(--rf-primary);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Systemzustand</h1>
+            <p class="text-muted">Live-Übersicht der System-Performance und Ressourcen</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="refreshData()" class="btn btn-outline-primary">
+                <i class="fas fa-sync me-2"></i>Aktualisieren
+            </button>
+            <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- System Resources -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-icon cpu">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <div>
+                        <h3 class="status-title">CPU</h3>
+                        <p class="status-subtitle">Prozessor-Auslastung</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="metric-value">{{ system_info.cpu_usage|floatformat:1 }}%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill {% if system_info.cpu_usage < 50 %}progress-low{% elif system_info.cpu_usage < 80 %}progress-medium{% else %}progress-high{% endif %}" 
+                             style="width: {{ system_info.cpu_usage }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-icon memory">
+                        <i class="fas fa-memory"></i>
+                    </div>
+                    <div>
+                        <h3 class="status-title">Arbeitsspeicher</h3>
+                        <p class="status-subtitle">RAM-Verbrauch</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="metric-value">{{ system_info.memory_usage|floatformat:1 }}%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill {% if system_info.memory_usage < 60 %}progress-low{% elif system_info.memory_usage < 85 %}progress-medium{% else %}progress-high{% endif %}" 
+                             style="width: {{ system_info.memory_usage }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-icon disk">
+                        <i class="fas fa-hdd"></i>
+                    </div>
+                    <div>
+                        <h3 class="status-title">Festplatte</h3>
+                        <p class="status-subtitle">Speicher-Verbrauch</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="metric-value">{{ system_info.disk_usage|floatformat:1 }}%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill {% if system_info.disk_usage < 70 %}progress-low{% elif system_info.disk_usage < 90 %}progress-medium{% else %}progress-high{% endif %}" 
+                             style="width: {{ system_info.disk_usage }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Statistics -->
+    <div class="status-card">
+        <div class="status-header">
+            <div class="status-icon app">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div>
+                <h3 class="status-title">Anwendungs-Statistiken</h3>
+                <p class="status-subtitle">Platform-spezifische Metriken</p>
+            </div>
+        </div>
+        
+        <div class="metric-grid">
+            <div class="metric-item">
+                <div class="metric-value">{{ app_stats.total_users }}</div>
+                <div class="metric-label">Benutzer gesamt</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">{{ app_stats.active_platforms }}</div>
+                <div class="metric-label">Aktive Plattformen</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">{{ app_stats.total_errors_24h }}</div>
+                <div class="metric-label">Fehler (24h)</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">{{ app_stats.active_alerts }}</div>
+                <div class="metric-label">Aktive Alerts</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div>
+                        <h3 class="status-title">System-Information</h3>
+                        <p class="status-subtitle">Basis-Konfiguration</p>
+                    </div>
+                </div>
+                
+                <table class="info-table">
+                    <tr>
+                        <th>Betriebssystem</th>
+                        <td>{{ system_info.platform }}</td>
+                    </tr>
+                    <tr>
+                        <th>Python Version</th>
+                        <td>{{ system_info.python_version }}</td>
+                    </tr>
+                    <tr>
+                        <th>Datenbank</th>
+                        <td>{{ db_version|truncatechars:50 }}</td>
+                    </tr>
+                    <tr>
+                        <th>System-Uptime</th>
+                        <td>
+                            <span class="uptime-display">
+                                {% with uptime_days=system_info.uptime|floatformat:0|add:0|div:86400 %}
+                                    {% with uptime_hours=system_info.uptime|floatformat:0|add:0|div:3600|floatformat:0|add:0|mod:24 %}
+                                        {% with uptime_minutes=system_info.uptime|floatformat:0|add:0|div:60|floatformat:0|add:0|mod:60 %}
+                                            {{ uptime_days|floatformat:0 }}d {{ uptime_hours }}h {{ uptime_minutes }}m
+                                        {% endwith %}
+                                    {% endwith %}
+                                {% endwith %}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="status-card">
+                <div class="status-header">
+                    <div class="status-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <div>
+                        <h3 class="status-title">Performance-Trends</h3>
+                        <p class="status-subtitle">Letzte 24 Stunden</p>
+                    </div>
+                </div>
+                
+                <div class="text-center py-4">
+                    <div class="metric-value">{{ system_info.cpu_usage|add:system_info.memory_usage|div:2|floatformat:1 }}%</div>
+                    <div class="metric-label">Durchschnittliche Auslastung</div>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Performance-Charts werden in einer zukünftigen Version hinzugefügt
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshData() {
+    const button = document.querySelector('[onclick="refreshData()"]');
+    const icon = button.querySelector('i');
+    
+    // Show loading state
+    icon.className = 'fas fa-spinner fa-spin me-2';
+    button.disabled = true;
+    
+    // Refresh page after a short delay
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    window.location.reload();
+}, 30000);
+</script>
+{% endblock %}

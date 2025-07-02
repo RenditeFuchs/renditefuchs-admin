@@ -1,0 +1,497 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}System Überblick - RenditeFuchs Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        color: white;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(50%, -50%);
+    }
+    
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 300;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .status-indicator {
+        position: relative;
+        z-index: 2;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+    }
+    
+    .modern-card {
+        background: var(--rf-bg-primary);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px var(--rf-shadow);
+        border: 1px solid var(--rf-border);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .modern-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px var(--rf-shadow);
+    }
+    
+    .kpi-card {
+        background: var(--rf-bg-primary);
+        border-radius: 20px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid var(--rf-border);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+    
+    .kpi-card.success::before {
+        background: linear-gradient(90deg, #10b981, #34d399);
+    }
+    
+    .kpi-card.warning::before {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+    
+    .kpi-card.danger::before {
+        background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+    
+    .kpi-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.5rem;
+        color: white;
+    }
+    
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .kpi-label {
+        font-size: 0.95rem;
+        color: var(--rf-text-secondary);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .platform-list {
+        background: var(--rf-bg-primary);
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid var(--rf-border);
+    }
+    
+    .platform-item {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--rf-border);
+        transition: all 0.2s ease;
+    }
+    
+    .platform-item:last-child {
+        border-bottom: none;
+    }
+    
+    .platform-item:hover {
+        background: rgba(255, 107, 53, 0.05);
+    }
+    
+    .status-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.75rem;
+        position: relative;
+    }
+    
+    .status-dot.online {
+        background: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    
+    .status-dot.warning {
+        background: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+    
+    .status-dot.offline {
+        background: #ef4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    }
+    
+    .status-dot.online::after {
+        content: '';
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #10b981;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        }
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+        }
+    }
+    
+    .modern-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .modern-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .modern-button.secondary {
+        background: linear-gradient(135deg, #64748b 0%, #94a3b8 100%);
+    }
+    
+    .modern-button.secondary:hover {
+        box-shadow: 0 8px 25px rgba(100, 116, 139, 0.3);
+    }
+    
+    .issues-card {
+        background: linear-gradient(135deg, #fef7f0 0%, #fef3f2 100%);
+        border: 1px solid #fed7d7;
+        border-radius: 16px;
+        padding: 2rem;
+    }
+    
+    .all-good-card {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border: 1px solid #bbf7d0;
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+    
+    .issue-item {
+        background: var(--rf-bg-primary);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        border: 1px solid #fee2e2;
+        transition: all 0.2s ease;
+    }
+    
+    .issue-item:hover {
+        transform: translateX(4px);
+        border-color: #fecaca;
+    }
+    
+    .issue-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .env-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+    
+    .env-badge.test {
+        background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    }
+    
+    .env-badge.live {
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Modern Hero Section -->
+    <div class="dashboard-hero">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="hero-title">System Überblick</h1>
+                <p class="hero-subtitle">Live-Status aller RenditeFuchs Plattformen</p>
+            </div>
+            <div class="status-indicator">
+                <i class="fas fa-server me-2"></i>
+                {{ stats.online_platforms }}/{{ stats.total_platforms }} Online
+            </div>
+        </div>
+    </div>
+    <!-- Modern KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="kpi-card {% if stats.uptime_percentage >= 95 %}success{% elif stats.uptime_percentage >= 90 %}warning{% else %}danger{% endif %}">
+                <div class="kpi-icon" style="background: linear-gradient(135deg, {% if stats.uptime_percentage >= 95 %}#10b981, #34d399{% elif stats.uptime_percentage >= 90 %}#f59e0b, #fbbf24{% else %}#ef4444, #f87171{% endif %});">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="kpi-value">{{ stats.uptime_percentage }}%</div>
+                <div class="kpi-label">Verfügbarkeit (24h)</div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+            <div class="kpi-card {% if stats.total_errors_24h == 0 %}success{% elif stats.total_errors_24h <= 5 %}warning{% else %}danger{% endif %}">
+                <div class="kpi-icon" style="background: linear-gradient(135deg, {% if stats.total_errors_24h == 0 %}#10b981, #34d399{% elif stats.total_errors_24h <= 5 %}#f59e0b, #fbbf24{% else %}#ef4444, #f87171{% endif %});">
+                    <i class="fas fa-{% if stats.total_errors_24h == 0 %}check{% else %}exclamation-triangle{% endif %}"></i>
+                </div>
+                <div class="kpi-value">{{ stats.total_errors_24h }}</div>
+                <div class="kpi-label">Fehler (24h)</div>
+            </div>
+        </div>
+    </div>
+    <!-- Modern Platform Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="modern-card">
+                <div class="card-header bg-transparent border-bottom-0 p-4">
+                    <h5 class="mb-0 fw-bold">Plattformen Status</h5>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="row">
+                        {% for env, platforms in platform_groups.items %}
+                        {% if platforms %}
+                        <div class="col-md-6 mb-3">
+                            <span class="env-badge {% if env == 'test' %}test{% elif env == 'live' %}live{% endif %}">
+                                {% if env == 'test' %}Test Environment{% elif env == 'live' %}Live Environment{% else %}{{ env|title }}{% endif %}
+                            </span>
+                            <div class="platform-list">
+                                {% for platform_info in platforms %}
+                                <div class="platform-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <span class="status-dot {% if platform_info.health and platform_info.health.status == 'healthy' %}online{% elif platform_info.health and platform_info.health.status == 'degraded' %}warning{% else %}offline{% endif %}"></span>
+                                            <span class="fw-medium">{{ platform_info.platform.name }}</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if platform_info.health and platform_info.health.response_time %}
+                                                <small class="text-muted">{{ platform_info.health.response_time|floatformat:0 }}ms</small>
+                                            {% endif %}
+                                            {% if platform_info.error_count_24h > 0 %}
+                                                <span class="badge bg-danger rounded-pill">{{ platform_info.error_count_24h }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="#" class="modern-button me-2" onclick="refreshPlatformStatus()">
+                            <i class="fas fa-sync me-2"></i>Status aktualisieren
+                        </a>
+                        <a href="{% url 'monitoring:errors_list' %}" class="modern-button secondary">
+                            <i class="fas fa-list me-2"></i>Alle Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modern Issues Section -->
+    {% if recent_errors or active_alerts %}
+    <div class="row">
+        <div class="col-12">
+            <div class="issues-card">
+                <h5 class="mb-3 fw-bold">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    Aktuelle Probleme
+                </h5>
+                
+                {% if recent_errors %}
+                    {% for error in recent_errors|slice:":3" %}
+                    <div class="issue-item">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-circle text-danger me-3"></i>
+                            <div class="flex-grow-1">
+                                <div class="fw-medium">{{ error.platform.name }}</div>
+                                <small class="text-muted">{{ error.message|truncatechars:60 }}</small>
+                            </div>
+                            <small class="text-muted">{{ error.last_seen|timesince }} vor</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                {% if active_alerts %}
+                    {% for alert in active_alerts|slice:":3" %}
+                    <div class="issue-item">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-bell text-warning me-3"></i>
+                            <div class="flex-grow-1">
+                                <div class="fw-medium">{{ alert.platform.name }}</div>
+                                <small class="text-muted">{{ alert.title|truncatechars:60 }}</small>
+                            </div>
+                            <small class="text-muted">{{ alert.created_at|timesince }} vor</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <div class="text-center mt-4">
+                    <a href="{% url 'monitoring:errors_list' %}" class="modern-button me-2" style="background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Alle Fehler
+                    </a>
+                    <a href="{% url 'monitoring:alerts_list' %}" class="modern-button" style="background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);">
+                        <i class="fas fa-bell me-2"></i>Alle Warnungen
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Modern All Good Status -->
+    <div class="row">
+        <div class="col-12">
+            <div class="all-good-card">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <h4 class="text-success fw-bold mb-2">Alles läuft einwandfrei!</h4>
+                    <p class="text-muted mb-0">Keine aktuellen Probleme oder Warnungen detected</p>
+                </div>
+                <div class="d-flex justify-content-center gap-3">
+                    <div class="text-center">
+                        <div class="fw-bold text-success">{{ stats.online_platforms }}</div>
+                        <small class="text-muted">Online</small>
+                    </div>
+                    <div class="text-center">
+                        <div class="fw-bold text-success">{{ stats.uptime_percentage }}%</div>
+                        <small class="text-muted">Uptime</small>
+                    </div>
+                    <div class="text-center">
+                        <div class="fw-bold text-success">0</div>
+                        <small class="text-muted">Fehler</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Refresh platform status
+function refreshPlatformStatus() {
+    const button = event.target;
+    const icon = button.querySelector('i');
+    
+    // Show loading state
+    icon.className = 'fas fa-spinner fa-spin';
+    button.disabled = true;
+    
+    // Refresh page after a short delay to show loading
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
+}
+
+// Simple toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 3000);
+}
+
+// Auto-refresh dashboard every 2 minutes
+setInterval(() => {
+    window.location.reload();
+}, 120000);
+</script>
+{% endblock %}

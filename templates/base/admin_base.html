@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RenditeFuchs Admin Dashboard{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Admin CSS -->
+    <style>
+        :root {
+            --rf-primary: #FF6B35;
+            --rf-primary-hover: #E55A2B;
+            --rf-secondary: #2C3E50;
+            --rf-success: #28A745;
+            --rf-warning: #FFC107;
+            --rf-danger: #DC3545;
+            --rf-info: #17A2B8;
+            
+            /* Light theme */
+            --rf-bg-primary: #FFFFFF;
+            --rf-bg-secondary: #F8F9FA;
+            --rf-bg-sidebar: #FFFFFF;
+            --rf-text-primary: #212529;
+            --rf-text-secondary: #6C757D;
+            --rf-border: #DEE2E6;
+            --rf-shadow: rgba(0, 0, 0, 0.1);
+        }
+        
+        [data-theme="dark"] {
+            --rf-bg-primary: #1A1A1A;
+            --rf-bg-secondary: #2D2D2D;
+            --rf-bg-sidebar: #2D2D2D;
+            --rf-text-primary: #FFFFFF;
+            --rf-text-secondary: #B8BCC8;
+            --rf-border: #404040;
+            --rf-shadow: rgba(0, 0, 0, 0.3);
+        }
+        
+        body {
+            background-color: var(--rf-bg-secondary);
+            color: var(--rf-text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            transition: all 0.3s ease;
+        }
+        
+        /* Sidebar */
+        .admin-sidebar {
+            background-color: var(--rf-bg-sidebar);
+            border-right: 1px solid var(--rf-border);
+            min-height: 100vh;
+            box-shadow: 2px 0 10px var(--rf-shadow);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-content {
+            margin-left: 280px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-brand {
+            padding: 20px;
+            border-bottom: 1px solid var(--rf-border);
+        }
+        
+        .sidebar-brand h4 {
+            color: var(--rf-primary);
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+        
+        .nav-section {
+            margin-bottom: 30px;
+        }
+        
+        .nav-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--rf-text-secondary);
+            padding: 0 20px 10px;
+            letter-spacing: 0.5px;
+        }
+        
+        .nav-link {
+            color: var(--rf-text-primary);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border: none;
+            background: none;
+        }
+        
+        .nav-link:hover {
+            background-color: rgba(255, 107, 53, 0.1);
+            color: var(--rf-primary);
+            text-decoration: none;
+        }
+        
+        .nav-link.active {
+            background-color: var(--rf-primary);
+            color: white;
+        }
+        
+        .nav-link i {
+            width: 20px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        
+        /* Status badges */
+        .status-online { color: var(--rf-success); }
+        .status-offline { color: var(--rf-danger); }
+        .status-warning { color: var(--rf-warning); }
+        .status-error { color: var(--rf-danger); }
+        .status-unknown { color: var(--rf-text-secondary); }
+        
+        /* Cards */
+        .admin-card {
+            background-color: var(--rf-bg-primary);
+            border: 1px solid var(--rf-border);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px var(--rf-shadow);
+            transition: all 0.3s ease;
+            color: var(--rf-text-primary);
+        }
+        
+        .admin-card:hover {
+            box-shadow: 0 4px 12px var(--rf-shadow);
+        }
+        
+        .admin-card .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid var(--rf-border);
+            color: var(--rf-text-primary);
+        }
+        
+        .admin-card .card-footer {
+            background-color: transparent;
+            border-top: 1px solid var(--rf-border);
+            color: var(--rf-text-primary);
+        }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--rf-bg-primary);
+            border: 1px solid var(--rf-border);
+            border-radius: 50px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 1001;
+        }
+        
+        .theme-toggle:hover {
+            background-color: var(--rf-primary);
+            color: white;
+        }
+        
+        /* Platform status indicators */
+        .platform-status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .platform-status.online { background-color: var(--rf-success); }
+        .platform-status.offline { background-color: var(--rf-danger); }
+        .platform-status.warning { background-color: var(--rf-warning); }
+        .platform-status.error { background-color: var(--rf-danger); }
+        .platform-status.unknown { background-color: var(--rf-text-secondary); }
+        
+        /* Bootstrap overrides for theme consistency */
+        .btn-primary {
+            background-color: var(--rf-primary);
+            border-color: var(--rf-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--rf-primary-hover);
+            border-color: var(--rf-primary-hover);
+            color: white;
+        }
+        
+        .btn-outline-primary {
+            color: var(--rf-primary);
+            border-color: var(--rf-primary);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--rf-primary);
+            border-color: var(--rf-primary);
+            color: white;
+        }
+        
+        .btn-outline-secondary {
+            color: var(--rf-text-secondary);
+            border-color: var(--rf-border);
+        }
+        
+        .btn-outline-secondary:hover {
+            background-color: var(--rf-text-secondary);
+            border-color: var(--rf-text-secondary);
+            color: var(--rf-bg-primary);
+        }
+        
+        .text-primary {
+            color: var(--rf-text-primary) !important;
+        }
+        
+        .text-muted {
+            color: var(--rf-text-secondary) !important;
+        }
+        
+        .bg-primary {
+            background-color: var(--rf-primary) !important;
+        }
+        
+        [data-theme="dark"] .text-secondary {
+            color: var(--rf-text-secondary) !important;
+        }
+        
+        [data-theme="dark"] .table-light {
+            background-color: var(--rf-bg-secondary) !important;
+            color: var(--rf-text-primary) !important;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .admin-sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .admin-content {
+                margin-left: 0;
+                padding: 10px;
+            }
+            
+            .mobile-menu-toggle {
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                z-index: 1002;
+                background: var(--rf-primary);
+                color: white;
+                border: none;
+                border-radius: 50px;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .mobile-menu-toggle {
+                display: none;
+            }
+        }
+        
+        /* Status Badge Colors - Theme Compatible */
+        .status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 80px;
+            text-align: center;
+            border: 1px solid transparent;
+        }
+        
+        .status-trial {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+        
+        .status-active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .status-past_due {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        
+        .status-canceled {
+            background: rgba(107, 114, 128, 0.15);
+            color: #6b7280;
+            border-color: rgba(107, 114, 128, 0.2);
+        }
+        
+        .status-suspended {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+        
+        .status-inactive {
+            background: rgba(107, 114, 128, 0.15);
+            color: #6b7280;
+            border-color: rgba(107, 114, 128, 0.2);
+        }
+        
+        /* Customer Type Badges */
+        .customer-type-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .type-individual {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .type-business {
+            background: rgba(139, 69, 19, 0.15);
+            color: #8b4513;
+            border: 1px solid rgba(139, 69, 19, 0.2);
+        }
+        
+        [data-theme="dark"] .type-individual {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+        
+        [data-theme="dark"] .type-business {
+            background: rgba(139, 69, 19, 0.2);
+            color: #cd853f;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Theme wechseln">
+        <i class="fas fa-moon" id="themeIcon"></i>
+    </button>
+    
+    <!-- Sidebar -->
+    <div class="admin-sidebar" id="adminSidebar">
+        <div class="sidebar-brand">
+            <h4><i class="fas fa-chart-line"></i> RenditeFuchs</h4>
+            <small class="text-muted">Admin Dashboard</small>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <!-- Overview Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">📊 Überblick</div>
+                <a href="{% url 'monitoring:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="{% url 'monitoring:system_status' %}" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    Systemzustand
+                </a>
+                <a href="{% url 'monitoring:errors_list' %}" class="nav-link">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Fehlerüberwachung
+                </a>
+                <a href="{% url 'monitoring:alerts_list' %}" class="nav-link">
+                    <i class="fas fa-bell"></i>
+                    Alert Management
+                </a>
+            </div>
+            
+            <!-- Users & Access Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">👥 Benutzer & Zugriff</div>
+                <a href="{% url 'monitoring:user_management' %}" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    Benutzerverwaltung
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-user-shield"></i>
+                    Benutzer-Impersonierung
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-users-cog"></i>
+                    Gruppen & Berechtigungen
+                </a>
+            </div>
+            
+            <!-- Business Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">💰 Geschäft</div>
+                <a href="{% url 'business:dashboard' %}" class="nav-link {% if 'business' in request.resolver_match.namespace %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i>
+                    Business Dashboard
+                </a>
+                <a href="{% url 'business:pricing_plans' %}" class="nav-link">
+                    <i class="fas fa-tags"></i>
+                    Preispläne
+                </a>
+                <a href="{% url 'business:customers' %}" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    Kunden
+                </a>
+                <a href="{% url 'business:subscriptions' %}" class="nav-link">
+                    <i class="fas fa-credit-card"></i>
+                    Abonnements
+                </a>
+                <a href="{% url 'business:invoices' %}" class="nav-link">
+                    <i class="fas fa-file-invoice"></i>
+                    Rechnungen
+                </a>
+                <a href="{% url 'business:analytics' %}" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    Revenue Analytics
+                </a>
+            </div>
+            
+            <!-- System Section -->
+            <div class="nav-section">
+                <div class="nav-section-title">🔧 System</div>
+                <a href="{% url 'monitoring:settings' %}" class="nav-link">
+                    <i class="fas fa-cog"></i>
+                    Einstellungen
+                </a>
+                <a href="{% url 'monitoring:database_status' %}" class="nav-link">
+                    <i class="fas fa-database"></i>
+                    Datenbank
+                </a>
+                <a href="{% url 'monitoring:server_status' %}" class="nav-link">
+                    <i class="fas fa-server"></i>
+                    Serverstatus
+                </a>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="admin-content">
+        {% block content %}
+        {% endblock %}
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Admin Dashboard JS -->
+    <script>
+        // Theme Management
+        function getTheme() {
+            return localStorage.getItem('adminTheme') || 'light';
+        }
+        
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('adminTheme', theme);
+            updateThemeButton(theme);
+        }
+        
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'dark') {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+        
+        function toggleTheme() {
+            const currentTheme = getTheme();
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme);
+        }
+        
+        // Mobile Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('adminSidebar');
+            sidebar.classList.toggle('active');
+        }
+        
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTheme(getTheme());
+        });
+        
+        // Auto-refresh health status every 30 seconds
+        function refreshHealthStatus() {
+            fetch('/monitoring/api/health/')
+                .then(response => response.json())
+                .then(data => {
+                    // Update platform status indicators
+                    data.platforms.forEach(platform => {
+                        const indicators = document.querySelectorAll(`[data-platform-id="${platform.id}"]`);
+                        indicators.forEach(indicator => {
+                            indicator.className = `platform-status ${platform.status}`;
+                        });
+                    });
+                })
+                .catch(console.error);
+        }
+        
+        // Start auto-refresh
+        setInterval(refreshHealthStatus, 30000);
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

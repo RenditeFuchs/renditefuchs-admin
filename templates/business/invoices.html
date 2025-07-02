@@ -1,0 +1,466 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rechnungen Verwaltung{% endblock %}
+
+{% block extra_css %}
+<style>
+    .invoice-filters {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .invoice-table {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .table-header {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        padding: 1rem;
+        font-weight: 600;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .invoice-row {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        transition: background-color 0.2s ease;
+    }
+    
+    .invoice-row:hover {
+        background: var(--bg-hover);
+    }
+    
+    .invoice-row:last-child {
+        border-bottom: none;
+    }
+    
+    .invoice-number {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: var(--text-primary);
+        min-width: 150px;
+        margin-right: 1rem;
+    }
+    
+    .customer-info {
+        flex: 1;
+        margin-right: 1rem;
+    }
+    
+    .customer-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .customer-email {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .invoice-amount {
+        text-align: right;
+        min-width: 120px;
+        margin-right: 1rem;
+    }
+    
+    .amount-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .amount-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+    
+    .invoice-dates {
+        text-align: center;
+        min-width: 100px;
+        margin-right: 1rem;
+    }
+    
+    .date-value {
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .date-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+    
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        min-width: 90px;
+        text-align: center;
+    }
+    
+    .status-draft {
+        background: #f8f9fa;
+        color: #6c757d;
+        border: 1px solid #dee2e6;
+    }
+    
+    .status-sent {
+        background: #cce7ff;
+        color: #004085;
+        border: 1px solid #b3d7ff;
+    }
+    
+    .status-paid {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-overdue {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .status-canceled {
+        background: #f8f9fa;
+        color: #6c757d;
+        border: 1px solid #dee2e6;
+    }
+    
+    .overdue-warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        color: #856404;
+    }
+    
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .summary-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .summary-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #FF6B35;
+        margin-bottom: 0.5rem;
+    }
+    
+    .summary-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .outstanding-amount {
+        color: #dc3545 !important;
+    }
+    
+    .pagination-wrapper {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-top: none;
+        padding: 1rem;
+        border-radius: 0 0 8px 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Rechnungen Verwaltung</h1>
+    <div class="btn-group" role="group">
+        <a href="{% url 'business:dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+        <a href="{% url 'business:customers' %}" class="btn btn-outline-primary">Kunden</a>
+        <a href="{% url 'business:subscriptions' %}" class="btn btn-outline-primary">Abonnements</a>
+        <a href="{% url 'business:invoice_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Neue Rechnung
+        </a>
+    </div>
+</div>
+
+<!-- Outstanding Amount Warning -->
+{% if invoice_stats.total_outstanding > 0 %}
+<div class="overdue-warning">
+    <i class="fas fa-exclamation-triangle"></i>
+    <strong>Ausstehende Zahlungen:</strong> 
+    €{{ invoice_stats.total_outstanding|floatformat:2 }} in offenen Rechnungen
+    {% if invoice_stats.overdue > 0 %}
+        ({{ invoice_stats.overdue }} überfällig)
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Summary Statistics -->
+<div class="summary-stats">
+    <div class="summary-card">
+        <div class="summary-value">{{ invoice_stats.total }}</div>
+        <div class="summary-label">Rechnungen gesamt</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value">{{ invoice_stats.draft }}</div>
+        <div class="summary-label">Entwürfe</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value">{{ invoice_stats.sent }}</div>
+        <div class="summary-label">Versendet</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value">{{ invoice_stats.paid }}</div>
+        <div class="summary-label">Bezahlt</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value">{{ invoice_stats.overdue }}</div>
+        <div class="summary-label">Überfällig</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-value outstanding-amount">€{{ invoice_stats.total_outstanding|floatformat:0 }}</div>
+        <div class="summary-label">Ausstehend</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="invoice-filters">
+    <form method="get" class="row g-3">
+        <div class="col-md-4">
+            <label for="status" class="form-label">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">Alle Status</option>
+                <option value="draft" {% if current_filters.status == 'draft' %}selected{% endif %}>
+                    Entwurf
+                </option>
+                <option value="sent" {% if current_filters.status == 'sent' %}selected{% endif %}>
+                    Versendet
+                </option>
+                <option value="paid" {% if current_filters.status == 'paid' %}selected{% endif %}>
+                    Bezahlt
+                </option>
+                <option value="overdue" {% if current_filters.status == 'overdue' %}selected{% endif %}>
+                    Überfällig
+                </option>
+                <option value="canceled" {% if current_filters.status == 'canceled' %}selected{% endif %}>
+                    Storniert
+                </option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="search" class="form-label">Suche</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ current_filters.search }}" 
+                   placeholder="Rechnungsnummer oder Kunde...">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary me-2">
+                <i class="fas fa-search"></i> Filtern
+            </button>
+            <a href="{% url 'business:invoices' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times"></i> Zurücksetzen
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Invoices Table -->
+<div class="invoice-table">
+    <div class="table-header">
+        Rechnungen ({{ page_obj.paginator.count }} gefunden)
+    </div>
+    
+    {% for invoice in page_obj %}
+    <div class="invoice-row">
+        <div class="invoice-number">
+            {{ invoice.invoice_number }}
+        </div>
+        
+        <div class="customer-info">
+            <div class="customer-name">{{ invoice.customer.get_display_name }}</div>
+            <div class="customer-email">{{ invoice.customer.user.email }}</div>
+        </div>
+        
+        <div class="invoice-amount">
+            <div class="amount-value">€{{ invoice.total_amount|floatformat:2 }}</div>
+            <div class="amount-label">
+                {% if invoice.tax_amount > 0 %}
+                    (inkl. {{ invoice.tax_rate }}% MwSt.)
+                {% else %}
+                    (netto)
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="invoice-dates">
+            <div class="date-value">{{ invoice.issue_date|date:"d.m.Y" }}</div>
+            <div class="date-label">Ausgestellt</div>
+        </div>
+        
+        {% if invoice.due_date %}
+        <div class="invoice-dates">
+            <div class="date-value {% if invoice.is_overdue %}text-danger{% endif %}">
+                {{ invoice.due_date|date:"d.m.Y" }}
+            </div>
+            <div class="date-label">Fällig</div>
+        </div>
+        {% endif %}
+        
+        {% if invoice.paid_date %}
+        <div class="invoice-dates">
+            <div class="date-value text-success">{{ invoice.paid_date|date:"d.m.Y" }}</div>
+            <div class="date-label">Bezahlt</div>
+        </div>
+        {% endif %}
+        
+        <div class="status-badge status-{{ invoice.status }}">
+            {{ invoice.get_status_display }}
+        </div>
+        
+        <div class="ms-3">
+            <div class="btn-group" role="group">
+                <button class="btn btn-sm btn-outline-primary" 
+                        onclick="viewInvoice({{ invoice.id }})">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" 
+                        onclick="editInvoice({{ invoice.id }})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                {% if invoice.status == 'draft' %}
+                <button class="btn btn-sm btn-outline-success" 
+                        onclick="sendInvoice({{ invoice.id }})">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+                {% endif %}
+                {% if invoice.status == 'sent' %}
+                <button class="btn btn-sm btn-outline-warning" 
+                        onclick="markAsPaid({{ invoice.id }})">
+                    <i class="fas fa-check"></i>
+                </button>
+                {% endif %}
+                <button class="btn btn-sm btn-outline-info" 
+                        onclick="downloadInvoice({{ invoice.id }})">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="invoice-row">
+        <div class="text-center w-100 py-4">
+            <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Keine Rechnungen gefunden</h5>
+            <p class="text-muted">
+                {% if current_filters.status or current_filters.search %}
+                    Versuchen Sie andere Suchkriterien oder setzen Sie den Filter zurück.
+                {% else %}
+                    Erstellen Sie Ihre erste Rechnung, um mit der Abrechnung zu beginnen.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="pagination-wrapper">
+    <nav aria-label="Rechnungen Navigation">
+        <ul class="pagination justify-content-center mb-0">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}">
+                        Erste
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}">
+                        Zurück
+                    </a>
+                </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">
+                    Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                </span>
+            </li>
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}">
+                        Weiter
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}">
+                        Letzte
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function createInvoice() {
+    window.open('/django-admin/business/invoice/add/', '_blank');
+}
+
+function viewInvoice(invoiceId) {
+    window.open(`/django-admin/business/invoice/${invoiceId}/change/`, '_blank');
+}
+
+function editInvoice(invoiceId) {
+    window.open(`/django-admin/business/invoice/${invoiceId}/change/`, '_blank');
+}
+
+function sendInvoice(invoiceId) {
+    if (confirm('Möchten Sie diese Rechnung wirklich versenden?')) {
+        // Would implement AJAX call to send invoice
+        alert('Rechnungsversand wird in einer zukünftigen Version implementiert.');
+    }
+}
+
+function markAsPaid(invoiceId) {
+    if (confirm('Möchten Sie diese Rechnung als bezahlt markieren?')) {
+        // Would implement AJAX call to mark as paid
+        alert('Zahlungsmarkierung wird in einer zukünftigen Version implementiert.');
+    }
+}
+
+function downloadInvoice(invoiceId) {
+    // Would implement PDF download
+    alert('PDF-Download wird in einer zukünftigen Version implementiert.');
+}
+</script>
+{% endblock %}

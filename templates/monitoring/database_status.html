@@ -1,0 +1,475 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}Datenbank Status - RenditeFuchs Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .db-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px var(--rf-shadow);
+    }
+    
+    .db-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .db-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+    
+    .db-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        margin: 0;
+    }
+    
+    .db-subtitle {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background: var(--rf-bg-secondary);
+        border-radius: 8px;
+    }
+    
+    .info-label {
+        font-weight: 500;
+        color: var(--rf-text-primary);
+    }
+    
+    .info-value {
+        color: var(--rf-text-secondary);
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
+    
+    .table-stats {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+    
+    .table-stats th,
+    .table-stats td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .table-stats th {
+        background: var(--rf-bg-secondary);
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        position: sticky;
+        top: 0;
+    }
+    
+    .table-stats td {
+        color: var(--rf-text-secondary);
+    }
+    
+    .table-stats tbody tr:hover {
+        background: rgba(255, 107, 53, 0.05);
+    }
+    
+    .row-count {
+        text-align: right;
+        font-family: monospace;
+        font-weight: 600;
+        color: var(--rf-primary);
+    }
+    
+    .migration-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+    }
+    
+    .migration-item {
+        padding: 1rem;
+        border-bottom: 1px solid var(--rf-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .migration-item:last-child {
+        border-bottom: none;
+    }
+    
+    .migration-item:hover {
+        background: rgba(255, 107, 53, 0.05);
+    }
+    
+    .migration-name {
+        font-family: monospace;
+        color: var(--rf-text-primary);
+        font-weight: 500;
+    }
+    
+    .migration-app {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .connection-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .status-connected {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .status-error {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+    
+    .search-tables {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        background: var(--rf-bg-primary);
+        color: var(--rf-text-primary);
+        width: 100%;
+    }
+    
+    .search-tables:focus {
+        outline: none;
+        border-color: var(--rf-primary);
+        box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .btn-action {
+        padding: 0.75rem 1.5rem;
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        background: var(--rf-bg-primary);
+        color: var(--rf-text-primary);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-action:hover {
+        background: var(--rf-primary);
+        color: white;
+        text-decoration: none;
+        border-color: var(--rf-primary);
+    }
+    
+    .total-rows {
+        text-align: center;
+        padding: 1rem;
+        background: var(--rf-bg-secondary);
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+    
+    .total-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--rf-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .total-label {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Datenbank Status</h1>
+            <p class="text-muted">Übersicht der Datenbankverbindung, Tabellen und Migrationen</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="refreshData()" class="btn btn-outline-primary">
+                <i class="fas fa-sync me-2"></i>Aktualisieren
+            </button>
+            <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Database Connection Info -->
+    <div class="db-card">
+        <div class="db-header">
+            <div class="db-icon">
+                <i class="fas fa-database"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h3 class="db-title">Datenbankverbindung</h3>
+                <p class="db-subtitle">Aktuelle Verbindungsinformationen</p>
+            </div>
+            <div class="connection-status status-connected">
+                <span class="status-dot"></span>
+                Verbunden
+            </div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Engine</span>
+                <span class="info-value">{{ db_info.engine|split:'.'|last }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Datenbank</span>
+                <span class="info-value">{{ db_info.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Host</span>
+                <span class="info-value">{{ db_info.host|default:"localhost" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Port</span>
+                <span class="info-value">{{ db_info.port|default:"default" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="action-buttons">
+        <a href="/django-admin/" target="_blank" class="btn-action">
+            <i class="fas fa-cog"></i>
+            Django Admin
+        </a>
+        <button onclick="showSQLConsole()" class="btn-action">
+            <i class="fas fa-terminal"></i>
+            SQL Konsole
+        </button>
+        <button onclick="exportTableData()" class="btn-action">
+            <i class="fas fa-download"></i>
+            Daten exportieren
+        </button>
+        <button onclick="runMigrations()" class="btn-action">
+            <i class="fas fa-play"></i>
+            Migrationen ausführen
+        </button>
+    </div>
+
+    <!-- Table Statistics -->
+    <div class="db-card">
+        <div class="db-header">
+            <div class="db-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+                <i class="fas fa-table"></i>
+            </div>
+            <div>
+                <h3 class="db-title">Tabellen-Statistiken</h3>
+                <p class="db-subtitle">Übersicht aller Datenbanktabellen</p>
+            </div>
+        </div>
+        
+        <input type="text" class="search-tables" placeholder="Tabellen durchsuchen..." 
+               onkeyup="filterTables(this.value)">
+        
+        {% if table_stats.0.error %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Fehler beim Laden der Tabellen-Statistiken: {{ table_stats.0.error }}
+            </div>
+        {% else %}
+            <div style="max-height: 500px; overflow-y: auto;">
+                <table class="table-stats">
+                    <thead>
+                        <tr>
+                            <th>Tabellenname</th>
+                            <th style="text-align: right;">Zeilen</th>
+                            <th style="text-align: center;">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for table in table_stats %}
+                        <tr class="table-row" data-table-name="{{ table.name|lower }}">
+                            <td>
+                                <code>{{ table.name }}</code>
+                            </td>
+                            <td class="row-count">
+                                {{ table.rows|floatformat:0 }}
+                            </td>
+                            <td style="text-align: center;">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary btn-sm" 
+                                            onclick="viewTable('{{ table.name }}')"
+                                            title="Tabelle anzeigen">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" 
+                                            onclick="exportTable('{{ table.name }}')"
+                                            title="Daten exportieren">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Total Rows Summary -->
+            <div class="total-rows">
+                <div class="total-value">
+                    {% widthratio table_stats|length 1 1 %}{% for table in table_stats %}{% if not forloop.first %}{% add table.rows %}{% else %}{{ table.rows }}{% endif %}{% endfor %}
+                </div>
+                <div class="total-label">Datensätze in {{ table_stats|length }} Tabellen</div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Migrations -->
+    <div class="db-card">
+        <div class="db-header">
+            <div class="db-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+                <i class="fas fa-code-branch"></i>
+            </div>
+            <div>
+                <h3 class="db-title">Letzte Migrationen</h3>
+                <p class="db-subtitle">Verlauf der Datenbankänderungen</p>
+            </div>
+        </div>
+        
+        {% if recent_migrations %}
+            <div class="migration-list">
+                {% for migration in recent_migrations %}
+                <div class="migration-item">
+                    <div>
+                        <div class="migration-name">{{ migration.name }}</div>
+                        <div class="migration-app">App: {{ migration.app }}</div>
+                    </div>
+                    <div class="text-muted">
+                        <small>ID: {{ migration.id }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-code-branch fa-2x text-muted mb-3"></i>
+                <p class="text-muted">Keine Migrationen gefunden</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshData() {
+    const button = document.querySelector('[onclick="refreshData()"]');
+    const icon = button.querySelector('i');
+    
+    // Show loading state
+    icon.className = 'fas fa-spinner fa-spin me-2';
+    button.disabled = true;
+    
+    // Refresh page after a short delay
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
+}
+
+function filterTables(searchTerm) {
+    const rows = document.querySelectorAll('.table-row');
+    const term = searchTerm.toLowerCase();
+    
+    rows.forEach(row => {
+        const tableName = row.dataset.tableName;
+        if (tableName.includes(term)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function viewTable(tableName) {
+    // Would implement table viewer
+    alert(`Tabellen-Viewer für "${tableName}" wird in einer zukünftigen Version implementiert.`);
+}
+
+function exportTable(tableName) {
+    // Would implement table export
+    alert(`Export für Tabelle "${tableName}" wird in einer zukünftigen Version implementiert.`);
+}
+
+function showSQLConsole() {
+    // Would implement SQL console
+    alert('SQL-Konsole wird in einer zukünftigen Version implementiert.');
+}
+
+function exportTableData() {
+    // Would implement full database export
+    alert('Datenbank-Export wird in einer zukünftigen Version implementiert.');
+}
+
+function runMigrations() {
+    if (confirm('Möchten Sie ausstehende Migrationen wirklich ausführen?')) {
+        // Would implement migration runner
+        alert('Migrations-Runner wird in einer zukünftigen Version implementiert.');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,759 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Revenue Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-header {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .period-selector {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .period-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border-radius: 4px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .period-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+    
+    .period-btn.active {
+        background: #FF6B35;
+        color: white;
+        border-color: #FF6B35;
+    }
+    
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .kpi-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .kpi-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #FF6B35;
+        margin-bottom: 0.5rem;
+    }
+    
+    .kpi-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .kpi-change {
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .change-positive {
+        color: #28a745;
+    }
+    
+    .change-negative {
+        color: #dc3545;
+    }
+    
+    .change-neutral {
+        color: var(--text-secondary);
+    }
+    
+    .chart-container {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .chart-header {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .chart-canvas {
+        height: 300px;
+        width: 100%;
+    }
+    
+    .export-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .export-btn {
+        padding: 0.375rem 0.75rem;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+    
+    .export-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+    
+    .export-btn i {
+        margin-right: 0.25rem;
+    }
+    
+    .plan-performance {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .performance-header {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        padding: 1rem;
+        font-weight: 600;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .plan-row {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+    }
+    
+    .plan-row:last-child {
+        border-bottom: none;
+    }
+    
+    .plan-row:hover {
+        background: var(--bg-hover);
+    }
+    
+    .plan-name {
+        flex: 1;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .plan-stats {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+    }
+    
+    .plan-stat {
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+    }
+    
+    .revenue-bar {
+        height: 4px;
+        background: #e9ecef;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    
+    .revenue-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #FF6B35, #ff8c5a);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+    
+    .two-column {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    
+    @media (max-width: 768px) {
+        .two-column {
+            grid-template-columns: 1fr;
+        }
+        
+        .period-selector {
+            flex-wrap: wrap;
+        }
+        
+        .plan-stats {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Revenue Analytics</h1>
+    <div class="btn-group" role="group">
+        <a href="{% url 'business:dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+        <a href="{% url 'business:customers' %}" class="btn btn-outline-primary">Kunden</a>
+        <a href="{% url 'business:subscriptions' %}" class="btn btn-outline-primary">Abonnements</a>
+        <a href="{% url 'business:invoices' %}" class="btn btn-outline-primary">Rechnungen</a>
+    </div>
+</div>
+
+<!-- Period Selector -->
+<div class="analytics-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h3>Analysezeitraum</h3>
+        <div class="export-buttons">
+            <a href="{% url 'business:analytics' %}?export=csv&period={{ selected_period|default:'12m' }}" class="export-btn">
+                <i class="fas fa-file-csv"></i> CSV Export
+            </a>
+            <a href="{% url 'business:analytics' %}?export=excel&period={{ selected_period|default:'12m' }}" class="export-btn">
+                <i class="fas fa-file-excel"></i> Excel Export
+            </a>
+            <a href="{% url 'business:analytics' %}?export=pdf&period={{ selected_period|default:'12m' }}" class="export-btn">
+                <i class="fas fa-file-pdf"></i> PDF Report
+            </a>
+        </div>
+    </div>
+    <div class="period-selector">
+        <a href="?period=7d" class="period-btn {% if selected_period == '7d' %}active{% endif %}">
+            7 Tage
+        </a>
+        <a href="?period=30d" class="period-btn {% if selected_period == '30d' %}active{% endif %}">
+            30 Tage
+        </a>
+        <a href="?period=12m" class="period-btn {% if selected_period == '12m' or not selected_period %}active{% endif %}">
+            12 Monate
+        </a>
+    </div>
+</div>
+
+<!-- Key Performance Indicators -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-value">€{{ period_totals.total_revenue|default:0|floatformat:0 }}</div>
+        <div class="kpi-label">Gesamtumsatz</div>
+        <div class="kpi-change change-positive">
+            <i class="fas fa-arrow-up"></i> +12% vs. Vorperiode
+        </div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-value">€{{ period_totals.subscription_revenue|default:0|floatformat:0 }}</div>
+        <div class="kpi-label">Abonnement-Umsatz</div>
+        <div class="kpi-change change-positive">
+            <i class="fas fa-arrow-up"></i> +8% vs. Vorperiode
+        </div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-value">{{ period_totals.new_customers|default:0 }}</div>
+        <div class="kpi-label">Neue Kunden</div>
+        <div class="kpi-change change-positive">
+            <i class="fas fa-arrow-up"></i> +15% vs. Vorperiode
+        </div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-value">€{{ avg_customer_ltv|default:0|floatformat:0 }}</div>
+        <div class="kpi-label">Ø Customer LTV</div>
+        <div class="kpi-change change-positive">
+            <i class="fas fa-arrow-up"></i> +5% vs. Vorperiode
+        </div>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-value">{{ churn_rate|default:0|floatformat:1 }}%</div>
+        <div class="kpi-label">Churn Rate</div>
+        <div class="kpi-change change-negative">
+            <i class="fas fa-arrow-down"></i> -2% vs. Vorperiode
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="two-column">
+    <div class="chart-container">
+        <div class="chart-header">Umsatzentwicklung</div>
+        <canvas id="revenueChart" class="chart-canvas"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-header">MRR Entwicklung</div>
+        <canvas id="mrrChart" class="chart-canvas"></canvas>
+    </div>
+</div>
+
+<!-- Customer Analytics -->
+<div class="two-column">
+    <div class="chart-container">
+        <div class="chart-header">Kundenakquisition</div>
+        <canvas id="customerChart" class="chart-canvas"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-header">Plan Verteilung</div>
+        <canvas id="planDistributionChart" class="chart-canvas"></canvas>
+    </div>
+</div>
+
+<!-- Plan Performance -->
+<div class="plan-performance">
+    <div class="performance-header">
+        Plan Performance (nach Umsatz)
+    </div>
+    
+    {% for plan in plan_performance %}
+    <div class="plan-row">
+        <div class="plan-name">{{ plan.name }}</div>
+        <div class="plan-stats">
+            <div class="plan-stat">
+                <div class="stat-value">{{ plan.active_count|default:0 }}</div>
+                <div class="stat-label">Aktive Abos</div>
+            </div>
+            <div class="plan-stat">
+                <div class="stat-value">€{{ plan.monthly_revenue|default:0|floatformat:0 }}</div>
+                <div class="stat-label">Monatlicher Umsatz</div>
+            </div>
+            <div class="plan-stat">
+                <div class="stat-value">{{ plan.total_customers|default:0 }}</div>
+                <div class="stat-label">Kunden</div>
+            </div>
+        </div>
+        <div style="flex: 0 0 100px;">
+            <div class="revenue-bar">
+                <div class="revenue-fill" style="width: {% if plan.monthly_revenue %}{% widthratio plan.monthly_revenue plan_performance.0.monthly_revenue 100 %}{% else %}0{% endif %}%;"></div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="plan-row">
+        <div class="text-center w-100 py-4">
+            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Keine Plan-Daten verfügbar</h5>
+            <p class="text-muted">Erstellen Sie Preispläne und Abonnements, um Performance-Daten zu sehen.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Revenue Data Table -->
+{% if revenue_data %}
+<div class="chart-container">
+    <div class="chart-header">
+        Revenue Daten ({{ selected_period|default:"12m" }})
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Datum</th>
+                    <th>Gesamtumsatz</th>
+                    <th>Abonnements</th>
+                    <th>Einmalig</th>
+                    <th>Neue Kunden</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in revenue_data|slice:":10" %}
+                <tr>
+                    <td>{{ data.date|date:"d.m.Y" }}</td>
+                    <td>€{{ data.total_revenue|floatformat:2 }}</td>
+                    <td>€{{ data.subscription_revenue|floatformat:2 }}</td>
+                    <td>€{{ data.one_time_revenue|floatformat:2 }}</td>
+                    <td>{{ data.new_customers }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if revenue_data|length > 10 %}
+    <div class="text-center mt-3">
+        <small class="text-muted">Zeige die ersten 10 von {{ revenue_data|length }} Einträgen</small>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="chart-container">
+    <div class="chart-header">Revenue Daten</div>
+    <div class="text-center py-4">
+        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">Keine Revenue-Daten verfügbar</h5>
+        <p class="text-muted">Revenue-Metriken werden automatisch generiert, sobald Transaktionen stattfinden.</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Chart.js theme configuration
+    const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDarkMode ? '#ffffff' : '#333333';
+    const gridColor = isDarkMode ? '#444444' : '#e0e0e0';
+    
+    Chart.defaults.color = textColor;
+    Chart.defaults.borderColor = gridColor;
+    Chart.defaults.backgroundColor = 'rgba(255, 107, 53, 0.1)';
+    
+    // Revenue data from Django template
+    const revenueData = [
+        {% for data in revenue_data %}
+        {
+            date: '{{ data.date|date:"Y-m-d" }}',
+            total_revenue: {{ data.total_revenue|default:0 }},
+            subscription_revenue: {{ data.subscription_revenue|default:0 }},
+            one_time_revenue: {{ data.one_time_revenue|default:0 }},
+            new_customers: {{ data.new_customers|default:0 }}
+        },
+        {% endfor %}
+    ];
+    
+    // Plan performance data
+    const planData = [
+        {% for plan in plan_performance %}
+        {
+            name: '{{ plan.name }}',
+            active_count: {{ plan.active_count|default:0 }},
+            revenue: {{ plan.monthly_revenue|default:0 }},
+            customers: {{ plan.total_customers|default:0 }}
+        },
+        {% endfor %}
+    ];
+    
+    // 1. Revenue Chart - Line Chart
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx && revenueData.length > 0) {
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: revenueData.map(d => d.date),
+                datasets: [
+                    {
+                        label: 'Gesamtumsatz',
+                        data: revenueData.map(d => d.total_revenue),
+                        borderColor: '#FF6B35',
+                        backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Abonnement-Umsatz',
+                        data: revenueData.map(d => d.subscription_revenue),
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: textColor }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': €' + context.parsed.y.toLocaleString('de-DE', {minimumFractionDigits: 2});
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            parser: 'YYYY-MM-DD',
+                            tooltipFormat: 'DD.MM.YYYY',
+                            displayFormats: {
+                                day: 'DD.MM',
+                                month: 'MMM YYYY'
+                            }
+                        },
+                        grid: { color: gridColor },
+                        ticks: { color: textColor }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: { 
+                            color: textColor,
+                            callback: function(value) {
+                                return '€' + value.toLocaleString('de-DE');
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+    }
+    
+    // 2. MRR Chart - Area Chart
+    const mrrCtx = document.getElementById('mrrChart');
+    if (mrrCtx && revenueData.length > 0) {
+        new Chart(mrrCtx, {
+            type: 'line',
+            data: {
+                labels: revenueData.map(d => d.date),
+                datasets: [{
+                    label: 'MRR (Monthly Recurring Revenue)',
+                    data: revenueData.map(d => d.subscription_revenue),
+                    borderColor: '#17a2b8',
+                    backgroundColor: 'rgba(23, 162, 184, 0.2)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: textColor }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'MRR: €' + context.parsed.y.toLocaleString('de-DE', {minimumFractionDigits: 2});
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            parser: 'YYYY-MM-DD',
+                            tooltipFormat: 'DD.MM.YYYY',
+                            displayFormats: {
+                                day: 'DD.MM',
+                                month: 'MMM YYYY'
+                            }
+                        },
+                        grid: { color: gridColor },
+                        ticks: { color: textColor }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: { 
+                            color: textColor,
+                            callback: function(value) {
+                                return '€' + value.toLocaleString('de-DE');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 3. Customer Acquisition Chart - Bar Chart
+    const customerCtx = document.getElementById('customerChart');
+    if (customerCtx && revenueData.length > 0) {
+        new Chart(customerCtx, {
+            type: 'bar',
+            data: {
+                labels: revenueData.map(d => d.date),
+                datasets: [{
+                    label: 'Neue Kunden',
+                    data: revenueData.map(d => d.new_customers),
+                    backgroundColor: '#6f42c1',
+                    borderColor: '#6f42c1',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: textColor }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Neue Kunden: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            parser: 'YYYY-MM-DD',
+                            tooltipFormat: 'DD.MM.YYYY',
+                            displayFormats: {
+                                day: 'DD.MM',
+                                month: 'MMM YYYY'
+                            }
+                        },
+                        grid: { color: gridColor },
+                        ticks: { color: textColor }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: { 
+                            color: textColor,
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 4. Plan Distribution Chart - Doughnut Chart
+    const planCtx = document.getElementById('planDistributionChart');
+    if (planCtx && planData.length > 0) {
+        const colors = ['#FF6B35', '#28a745', '#17a2b8', '#ffc107', '#6f42c1', '#dc3545'];
+        
+        new Chart(planCtx, {
+            type: 'doughnut',
+            data: {
+                labels: planData.map(p => p.name),
+                datasets: [{
+                    label: 'Aktive Abonnements',
+                    data: planData.map(p => p.active_count),
+                    backgroundColor: colors.slice(0, planData.length),
+                    borderColor: colors.slice(0, planData.length),
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { 
+                            color: textColor,
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Animate revenue bars
+    setTimeout(() => {
+        document.querySelectorAll('.revenue-fill').forEach(bar => {
+            bar.style.opacity = '1';
+        });
+    }, 500);
+    
+    // Add empty state messages for charts without data
+    function addEmptyState(canvasId, message) {
+        const canvas = document.getElementById(canvasId);
+        if (canvas) {
+            const container = canvas.parentElement;
+            canvas.style.display = 'none';
+            
+            const emptyState = document.createElement('div');
+            emptyState.className = 'text-center py-4';
+            emptyState.innerHTML = `
+                <i class="fas fa-chart-line fa-2x text-muted mb-3"></i>
+                <h6 class="text-muted">${message}</h6>
+                <p class="text-muted small">Daten werden angezeigt, sobald Transaktionen vorhanden sind.</p>
+            `;
+            container.appendChild(emptyState);
+        }
+    }
+    
+    // Show empty states if no data
+    if (!revenueData.length) {
+        addEmptyState('revenueChart', 'Keine Umsatzdaten verfügbar');
+        addEmptyState('mrrChart', 'Keine MRR-Daten verfügbar');
+        addEmptyState('customerChart', 'Keine Kundendaten verfügbar');
+    }
+    
+    if (!planData.length) {
+        addEmptyState('planDistributionChart', 'Keine Plan-Daten verfügbar');
+    }
+});
+</script>
+{% endblock %}

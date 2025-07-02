@@ -1,0 +1,42 @@
+🚨 RENDITEFUCHS SYSTEM ALERT 🚨
+
+Alert: {{ alert.title }}
+Schweregrad: {{ alert.get_severity_display }}
+Zeit: {{ alert.created_at|date:"d.m.Y H:i" }} Uhr
+
+PLATTFORM DETAILS:
+==================
+Name: {{ alert.platform.name }}
+Environment: {{ alert.platform.get_environment_display }}
+URL: {{ alert.platform.url }}
+Alert Typ: {{ alert.get_alert_type_display }}
+
+NACHRICHT:
+==========
+{{ alert.message }}
+
+{% if alert.related_error %}
+VERWANDTER FEHLER:
+==================
+Typ: {{ alert.related_error.error_type }}
+Häufigkeit: {{ alert.related_error.count }}x
+Zuletzt: {{ alert.related_error.last_seen|date:"d.m.Y H:i" }}
+{% endif %}
+
+{% if alert.severity in 'critical,high' %}
+⚠️  SOFORTIGE AUFMERKSAMKEIT ERFORDERLICH
+Dieser Alert hat eine hohe Priorität und sollte umgehend überprüft werden.
+{% endif %}
+
+ADMIN DASHBOARD:
+================
+{{ dashboard_url }}/monitoring/
+
+ALERT MANAGEMENT:
+=================
+- Alert ansehen: {{ dashboard_url }}/monitoring/alerts/
+- Einstellungen: {{ dashboard_url }}/monitoring/settings/
+
+---
+RenditeFuchs Monitoring System
+Diese Nachricht wurde automatisch generiert.

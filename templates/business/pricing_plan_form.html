@@ -1,0 +1,508 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .form-section {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-section h3 {
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control,
+    .form-select {
+        background-color: var(--card-bg);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #FF6B35;
+        box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+    }
+    
+    .form-check-input:checked {
+        background-color: #FF6B35;
+        border-color: #FF6B35;
+    }
+    
+    .form-text {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+    
+    .preview-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .preview-price {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #FF6B35;
+        margin-bottom: 0.5rem;
+    }
+    
+    .preview-features {
+        list-style: none;
+        padding: 0;
+        margin: 1rem 0;
+    }
+    
+    .preview-features li {
+        padding: 0.25rem 0;
+        color: var(--text-secondary);
+        position: relative;
+        padding-left: 1.5rem;
+    }
+    
+    .preview-features li::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #28a745;
+        font-weight: bold;
+    }
+    
+    .error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    .featured-badge {
+        background: #FF6B35;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .plan-type-badge {
+        background: var(--bg-secondary);
+        color: var(--text-secondary);
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ title }}</h1>
+        <a href="{% url 'business:pricing_plans' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Zurück zu Preisplänen
+        </a>
+    </div>
+    
+    {% if form.errors %}
+    <div class="alert alert-danger">
+        <h5>Fehler beim Speichern:</h5>
+        <ul class="mb-0">
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <form method="post" id="planForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h3>Grundinformationen</h3>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="error-message">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.slug.id_for_label }}" class="form-label">{{ form.slug.label }}</label>
+                        {{ form.slug }}
+                        <div class="form-text">URL-freundlicher Name (nur Buchstaben, Zahlen und Bindestriche)</div>
+                        {% if form.slug.errors %}
+                            <div class="error-message">{{ form.slug.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.plan_type.id_for_label }}" class="form-label">{{ form.plan_type.label }}</label>
+                                {{ form.plan_type }}
+                                {% if form.plan_type.errors %}
+                                    <div class="error-message">{{ form.plan_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.display_order.id_for_label }}" class="form-label">{{ form.display_order.label }}</label>
+                                {{ form.display_order }}
+                                <div class="form-text">Niedrigere Zahlen werden zuerst angezeigt</div>
+                                {% if form.display_order.errors %}
+                                    <div class="error-message">{{ form.display_order.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="error-message">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Pricing -->
+                <div class="form-section">
+                    <h3>Preisgestaltung</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.price.id_for_label }}" class="form-label">{{ form.price.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    {{ form.price }}
+                                </div>
+                                {% if form.price.errors %}
+                                    <div class="error-message">{{ form.price.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="{{ form.billing_cycle.id_for_label }}" class="form-label">{{ form.billing_cycle.label }}</label>
+                                {{ form.billing_cycle }}
+                                {% if form.billing_cycle.errors %}
+                                    <div class="error-message">{{ form.billing_cycle.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Features -->
+                <div class="form-section">
+                    <h3>Features</h3>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.features_text.id_for_label }}" class="form-label">Plan Features</label>
+                        {{ form.features_text }}
+                        <div class="form-text">{{ form.features_text.help_text }}</div>
+                        {% if form.features_text.errors %}
+                            <div class="error-message">{{ form.features_text.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Limits -->
+                <div class="form-section">
+                    <h3>Ressourcen-Limits</h3>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="{{ form.max_users.id_for_label }}" class="form-label">{{ form.max_users.label }}</label>
+                                {{ form.max_users }}
+                                {% if form.max_users.errors %}
+                                    <div class="error-message">{{ form.max_users.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="{{ form.max_projects.id_for_label }}" class="form-label">{{ form.max_projects.label }}</label>
+                                {{ form.max_projects }}
+                                {% if form.max_projects.errors %}
+                                    <div class="error-message">{{ form.max_projects.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="{{ form.storage_gb.id_for_label }}" class="form-label">{{ form.storage_gb.label }}</label>
+                                <div class="input-group">
+                                    {{ form.storage_gb }}
+                                    <span class="input-group-text">GB</span>
+                                </div>
+                                {% if form.storage_gb.errors %}
+                                    <div class="error-message">{{ form.storage_gb.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Access Rights -->
+                <div class="form-section">
+                    <h3>Zugriffsrechte</h3>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.allows_api_access }}
+                        <label class="form-check-label" for="{{ form.allows_api_access.id_for_label }}">
+                            {{ form.allows_api_access.label }}
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.allows_priority_support }}
+                        <label class="form-check-label" for="{{ form.allows_priority_support.id_for_label }}">
+                            {{ form.allows_priority_support.label }}
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.allows_custom_branding }}
+                        <label class="form-check-label" for="{{ form.allows_custom_branding.id_for_label }}">
+                            {{ form.allows_custom_branding.label }}
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Display Settings -->
+                <div class="form-section">
+                    <h3>Anzeige-Einstellungen</h3>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.is_featured }}
+                        <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+                            {{ form.is_featured.label }}
+                        </label>
+                        <div class="form-text">Empfohlene Pläne werden hervorgehoben</div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                            {{ form.is_active.label }}
+                        </label>
+                        <div class="form-text">Nur aktive Pläne sind für neue Abonnements verfügbar</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <!-- Live Preview -->
+                <div class="form-section">
+                    <h3>Vorschau</h3>
+                    
+                    <div class="preview-card" id="planPreview">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h4 id="preview-name">Plan Name</h4>
+                                <span class="plan-type-badge" id="preview-type">free</span>
+                            </div>
+                            <span class="featured-badge" id="preview-featured" style="display: none;">Empfohlen</span>
+                        </div>
+                        
+                        <div class="preview-price" id="preview-price">€0</div>
+                        <div class="text-muted mb-3" id="preview-cycle">Monatlich</div>
+                        
+                        <p class="text-muted" id="preview-description">Beschreibung des Plans...</p>
+                        
+                        <ul class="preview-features" id="preview-features">
+                            <li>Feature wird hier angezeigt</li>
+                        </ul>
+                        
+                        <div class="row text-center mt-3">
+                            <div class="col-4">
+                                <div class="fw-bold" id="preview-users">1</div>
+                                <small class="text-muted">Benutzer</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold" id="preview-projects">1</div>
+                                <small class="text-muted">Projekte</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold" id="preview-storage">1GB</div>
+                                <small class="text-muted">Speicher</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="form-section">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> 
+                            {% if plan %}Plan aktualisieren{% else %}Plan erstellen{% endif %}
+                        </button>
+                        <a href="{% url 'business:pricing_plans' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Abbrechen
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Define field IDs first
+const fieldIds = {
+    'name': '{{ form.name.id_for_label }}',
+    'slug': '{{ form.slug.id_for_label }}',
+    'price': '{{ form.price.id_for_label }}',
+    'plan_type': '{{ form.plan_type.id_for_label }}',
+    'billing_cycle': '{{ form.billing_cycle.id_for_label }}',
+    'description': '{{ form.description.id_for_label }}',
+    'features_text': '{{ form.features_text.id_for_label }}',
+    'max_users': '{{ form.max_users.id_for_label }}',
+    'max_projects': '{{ form.max_projects.id_for_label }}',
+    'storage_gb': '{{ form.storage_gb.id_for_label }}',
+    'is_featured': '{{ form.is_featured.id_for_label }}'
+};
+
+// Auto-generate slug from name
+document.getElementById(fieldIds.name).addEventListener('input', function() {
+    const name = this.value;
+    const slug = name.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim('-');
+    
+    document.getElementById(fieldIds.slug).value = slug;
+    updatePreview();
+});
+
+// Update preview on form changes
+function updatePreview() {
+    const name = document.getElementById(fieldIds.name).value || 'Plan Name';
+    const price = document.getElementById(fieldIds.price).value || '0';
+    const type = document.getElementById(fieldIds.plan_type).value || 'free';
+    const cycle = document.getElementById(fieldIds.billing_cycle).value || 'monthly';
+    const description = document.getElementById(fieldIds.description).value || 'Beschreibung des Plans...';
+    const features = document.getElementById(fieldIds.features_text).value || '';
+    const users = document.getElementById(fieldIds.max_users).value || '1';
+    const projects = document.getElementById(fieldIds.max_projects).value || '1';
+    const storage = document.getElementById(fieldIds.storage_gb).value || '1';
+    const featured = document.getElementById(fieldIds.is_featured).checked;
+    
+    // Update preview elements
+    document.getElementById('preview-name').textContent = name;
+    document.getElementById('preview-type').textContent = type;
+    document.getElementById('preview-price').textContent = `€${price}`;
+    document.getElementById('preview-description').textContent = description;
+    document.getElementById('preview-users').textContent = users;
+    document.getElementById('preview-projects').textContent = projects;
+    document.getElementById('preview-storage').textContent = `${storage}GB`;
+    
+    // Update cycle display
+    const cycleMap = {
+        'monthly': 'Monatlich',
+        'quarterly': 'Vierteljährlich', 
+        'yearly': 'Jährlich',
+        'lifetime': 'Einmalig'
+    };
+    document.getElementById('preview-cycle').textContent = cycleMap[cycle] || 'Monatlich';
+    
+    // Update featured badge
+    const featuredBadge = document.getElementById('preview-featured');
+    if (featured) {
+        featuredBadge.style.display = 'inline-block';
+    } else {
+        featuredBadge.style.display = 'none';
+    }
+    
+    // Update features list
+    const featuresList = document.getElementById('preview-features');
+    if (features.trim()) {
+        const featuresArray = features.split('\n').filter(f => f.trim());
+        featuresList.innerHTML = featuresArray.map(feature => 
+            `<li>${feature.trim()}</li>`
+        ).join('');
+    } else {
+        featuresList.innerHTML = '<li>Keine Features definiert</li>';
+    }
+}
+
+// Add event listeners to all form fields
+Object.values(fieldIds).forEach(fieldId => {
+    const element = document.getElementById(fieldId);
+    if (element) {
+        element.addEventListener('input', updatePreview);
+        element.addEventListener('change', updatePreview);
+    }
+});
+
+// Initial preview update
+document.addEventListener('DOMContentLoaded', updatePreview);
+
+// Form validation
+document.getElementById('planForm').addEventListener('submit', function(e) {
+    const name = document.getElementById(fieldIds.name).value.trim();
+    const slug = document.getElementById(fieldIds.slug).value.trim();
+    const price = document.getElementById(fieldIds.price).value;
+    
+    if (!name) {
+        alert('Bitte geben Sie einen Plan-Namen ein.');
+        e.preventDefault();
+        return;
+    }
+    
+    if (!slug) {
+        alert('Bitte geben Sie einen URL-Slug ein.');
+        e.preventDefault();
+        return;
+    }
+    
+    if (price < 0) {
+        alert('Der Preis kann nicht negativ sein.');
+        e.preventDefault();
+        return;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RenditeFuchs Alert: {{ alert.title }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .email-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #FF6B35, #F7931E);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .alert-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+        .severity-critical { background: #dc3545; }
+        .severity-high { background: #fd7e14; }
+        .severity-medium { background: #ffc107; color: #000; }
+        .severity-low { background: #17a2b8; }
+        .content {
+            padding: 30px 20px;
+        }
+        .alert-details {
+            background: #f8f9fa;
+            border-left: 4px solid #FF6B35;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #6c757d;
+        }
+        .detail-value {
+            font-weight: 500;
+        }
+        .environment-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .env-test { background: #fff3cd; color: #856404; }
+        .env-live { background: #d1e7dd; color: #0a3622; }
+        .env-local { background: #cff4fc; color: #055160; }
+        .actions {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #FF6B35;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #E55A2B;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer a {
+            color: #FF6B35;
+            text-decoration: none;
+        }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .header, .content { padding: 20px 15px; }
+            .detail-row { flex-direction: column; }
+            .detail-label { margin-bottom: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚨 System Alert</h1>
+            <div class="alert-badge severity-{{ alert.severity }}">
+                {{ alert.get_severity_display }}
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <h2>{{ alert.title }}</h2>
+            <p>{{ alert.message }}</p>
+            
+            <!-- Alert Details -->
+            <div class="alert-details">
+                <h3 style="margin-top: 0; margin-bottom: 15px; color: #FF6B35;">Alert Details</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Platform:</span>
+                    <span class="detail-value">
+                        {{ alert.platform.name }}
+                        <span class="environment-badge env-{{ alert.platform.environment }}">
+                            {{ alert.platform.get_environment_display }}
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Alert Typ:</span>
+                    <span class="detail-value">{{ alert.get_alert_type_display }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Schweregrad:</span>
+                    <span class="detail-value">{{ alert.get_severity_display }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Zeit:</span>
+                    <span class="detail-value">{{ alert.created_at|date:"d.m.Y H:i" }} Uhr</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Platform URL:</span>
+                    <span class="detail-value">
+                        <a href="{{ alert.platform.url }}" style="color: #FF6B35;">{{ alert.platform.url }}</a>
+                    </span>
+                </div>
+                
+                {% if alert.related_error %}
+                <div class="detail-row">
+                    <span class="detail-label">Verwandter Fehler:</span>
+                    <span class="detail-value">{{ alert.related_error.error_type }} - {{ alert.related_error.count }}x aufgetreten</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Actions -->
+            <div class="actions">
+                <a href="{{ dashboard_url }}/monitoring/" class="btn">
+                    🔧 Admin Dashboard öffnen
+                </a>
+            </div>
+            
+            <!-- Additional Info -->
+            {% if alert.severity in 'critical,high' %}
+            <div style="background: #fff5f5; border: 1px solid #fecaca; padding: 15px; border-radius: 6px; margin-top: 20px;">
+                <strong>⚠️ Sofortige Aufmerksamkeit erforderlich</strong><br>
+                Dieser Alert hat eine hohe Priorität und sollte umgehend überprüft werden.
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                <strong>RenditeFuchs Monitoring System</strong><br>
+                Diese Nachricht wurde automatisch generiert.<br>
+                <a href="{{ dashboard_url }}/monitoring/settings/">Alert-Einstellungen verwalten</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

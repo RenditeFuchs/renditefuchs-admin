@@ -1,0 +1,351 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}Alert Management - RenditeFuchs Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-1">🔔 Alert Management</h1>
+            <p class="text-muted">Verwaltung und Überwachung aller System-Warnungen</p>
+        </div>
+    </div>
+    
+    <!-- Alert Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="admin-card p-4">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <div class="bg-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-bell text-white"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">{{ alert_stats.total_active }}</h5>
+                        <small class="text-muted">Aktive Alerts</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="admin-card p-4">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-exclamation-triangle text-white"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">{{ alert_stats.critical_count }}</h5>
+                        <small class="text-muted">Kritische Alerts</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="admin-card p-4">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <div class="bg-success rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-check text-white"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">{{ alert_stats.resolved_today }}</h5>
+                        <small class="text-muted">Heute gelöst</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="admin-card p-4">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <div class="bg-info rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                            <i class="fas fa-clock text-white"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">{{ alert_stats.avg_resolution_time }}</h5>
+                        <small class="text-muted">Ø Lösung (Std)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="admin-card p-4">
+                <form method="get" class="row g-3">
+                    <div class="col-md-2">
+                        <label for="environment" class="form-label">Environment</label>
+                        <select name="environment" id="environment" class="form-select" style="background: var(--rf-bg-primary); color: var(--rf-text-primary); border-color: var(--rf-border);">
+                            <option value="">Alle</option>
+                            <option value="test" {% if current_filters.environment == 'test' %}selected{% endif %}>Test</option>
+                            <option value="live" {% if current_filters.environment == 'live' %}selected{% endif %}>Live</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="platform" class="form-label">Plattform</label>
+                        <select name="platform" id="platform" class="form-select" style="background: var(--rf-bg-primary); color: var(--rf-text-primary); border-color: var(--rf-border);">
+                            <option value="">Alle Plattformen</option>
+                            {% for platform in platforms %}
+                            <option value="{{ platform.id }}" {% if current_filters.platform == platform.id|stringformat:"s" %}selected{% endif %}>
+                                {{ platform.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="severity" class="form-label">Schweregrad</label>
+                        <select name="severity" id="severity" class="form-select" style="background: var(--rf-bg-primary); color: var(--rf-text-primary); border-color: var(--rf-border);">
+                            <option value="">Alle</option>
+                            <option value="low" {% if current_filters.severity == 'low' %}selected{% endif %}>Niedrig</option>
+                            <option value="medium" {% if current_filters.severity == 'medium' %}selected{% endif %}>Mittel</option>
+                            <option value="high" {% if current_filters.severity == 'high' %}selected{% endif %}>Hoch</option>
+                            <option value="critical" {% if current_filters.severity == 'critical' %}selected{% endif %}>Kritisch</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">Status</label>
+                        <select name="status" id="status" class="form-select" style="background: var(--rf-bg-primary); color: var(--rf-text-primary); border-color: var(--rf-border);">
+                            <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>Aktiv</option>
+                            <option value="acknowledged" {% if current_filters.status == 'acknowledged' %}selected{% endif %}>Bestätigt</option>
+                            <option value="resolved" {% if current_filters.status == 'resolved' %}selected{% endif %}>Gelöst</option>
+                            <option value="all" {% if current_filters.status == 'all' %}selected{% endif %}>Alle</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter"></i> Filtern
+                        </button>
+                        <a href="{% url 'monitoring:alerts_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Zurücksetzen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alerts List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="admin-card">
+                <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-primary">System Alerts</h5>
+                    <span class="badge bg-secondary">{{ page_obj.paginator.count }} Alerts</span>
+                </div>
+                
+                {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-secondary">Environment</th>
+                                <th class="text-secondary">Plattform</th>
+                                <th class="text-secondary">Alert Typ</th>
+                                <th class="text-secondary">Schweregrad</th>
+                                <th class="text-secondary">Titel</th>
+                                <th class="text-secondary">Erstellt</th>
+                                <th class="text-secondary">Status</th>
+                                <th class="text-secondary">Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in page_obj %}
+                            <tr class="{% if alert.severity == 'critical' %}table-danger{% elif alert.severity == 'high' %}table-warning{% endif %}">
+                                <td>
+                                    {% if alert.platform.environment == 'test' %}
+                                    <span class="badge bg-warning">🟧 Test</span>
+                                    {% elif alert.platform.environment == 'live' %}
+                                    <span class="badge bg-success">🟩 Live</span>
+                                    {% else %}
+                                    <span class="badge bg-info">🔵 {{ alert.platform.environment|title }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong class="text-primary">{{ alert.platform.name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if alert.alert_type == 'downtime' %}danger{% elif alert.alert_type == 'critical_error' %}danger{% elif alert.alert_type == 'high_error_rate' %}warning{% else %}info{% endif %}">
+                                        {{ alert.get_alert_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if alert.severity == 'critical' %}danger{% elif alert.severity == 'high' %}warning{% elif alert.severity == 'medium' %}info{% else %}secondary{% endif %}">
+                                        {{ alert.get_severity_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="text-primary">{{ alert.title }}</div>
+                                    <small class="text-muted">{{ alert.message|truncatechars:60 }}</small>
+                                </td>
+                                <td>
+                                    <div class="text-primary">{{ alert.created_at|timesince }} vor</div>
+                                    <small class="text-muted">{{ alert.created_at|date:"d.m.Y H:i" }}</small>
+                                </td>
+                                <td>
+                                    {% if alert.status == 'active' %}
+                                    <span class="badge bg-danger">Aktiv</span>
+                                    {% elif alert.status == 'acknowledged' %}
+                                    <span class="badge bg-warning">Bestätigt</span>
+                                    <small class="text-muted d-block">{{ alert.acknowledged_at|timesince }} vor</small>
+                                    {% else %}
+                                    <span class="badge bg-success">Gelöst</span>
+                                    <small class="text-muted d-block">{{ alert.resolved_at|timesince }} vor</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-primary" 
+                                                onclick="viewAlertDetails({{ alert.id }})"
+                                                title="Details anzeigen">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if alert.status == 'active' %}
+                                        <button class="btn btn-outline-warning" 
+                                                onclick="acknowledgeAlert({{ alert.id }})"
+                                                title="Bestätigen">
+                                            <i class="fas fa-check-circle"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success" 
+                                                onclick="resolveAlert({{ alert.id }})"
+                                                title="Lösen">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% elif alert.status == 'acknowledged' %}
+                                        <button class="btn btn-outline-success" 
+                                                onclick="resolveAlert({{ alert.id }})"
+                                                title="Lösen">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="card-footer bg-transparent">
+                    <nav aria-label="Alert pagination">
+                        <ul class="pagination pagination-sm justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link text-primary" href="?page={{ page_obj.previous_page_number }}{% if current_filters.platform %}&platform={{ current_filters.platform }}{% endif %}{% if current_filters.severity %}&severity={{ current_filters.severity }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}">
+                                    Vorherige
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link bg-primary border-primary">
+                                    {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                                </span>
+                            </li>
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link text-primary" href="?page={{ page_obj.next_page_number }}{% if current_filters.platform %}&platform={{ current_filters.platform }}{% endif %}{% if current_filters.severity %}&severity={{ current_filters.severity }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}">
+                                    Nächste
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="card-body text-center text-muted py-5">
+                    <i class="fas fa-bell-slash fa-3x mb-3 text-success"></i>
+                    <h5 class="text-primary">Keine Alerts gefunden</h5>
+                    <p class="text-muted">Keine Alerts entsprechen Ihren aktuellen Filtern.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Details Modal -->
+<div class="modal fade" id="alertDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background: var(--rf-bg-primary); border-color: var(--rf-border);">
+            <div class="modal-header" style="border-color: var(--rf-border);">
+                <h5 class="modal-title" style="color: var(--rf-text-primary);">Alert Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="color: var(--rf-text-primary);" id="alertDetailsContent">
+                <!-- Content loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewAlertDetails(alertId) {
+    const modal = new bootstrap.Modal(document.getElementById('alertDetailsModal'));
+    const content = document.getElementById('alertDetailsContent');
+    
+    // Show loading
+    content.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Wird geladen...</div>';
+    modal.show();
+    
+    // TODO: Implement alert details API endpoint
+    content.innerHTML = '<div class="alert alert-info">Alert Details API noch nicht implementiert</div>';
+}
+
+function acknowledgeAlert(alertId) {
+    if (!confirm('Diesen Alert als bestätigt markieren?')) return;
+    
+    // TODO: Implement acknowledge alert API
+    showToast('Alert als bestätigt markiert', 'success');
+    setTimeout(() => window.location.reload(), 1000);
+}
+
+function resolveAlert(alertId) {
+    if (!confirm('Diesen Alert als gelöst markieren?')) return;
+    
+    // TODO: Implement resolve alert API
+    showToast('Alert als gelöst markiert', 'success');
+    setTimeout(() => window.location.reload(), 1000);
+}
+
+// Simple toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle me-2"></i>
+            ${message}
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

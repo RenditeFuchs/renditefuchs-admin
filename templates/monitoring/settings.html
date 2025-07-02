@@ -1,0 +1,428 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}Monitoring Einstellungen - RenditeFuchs Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .settings-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 4px var(--rf-shadow);
+    }
+    
+    .settings-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .settings-icon {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-hover));
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+    
+    .settings-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        margin: 0;
+    }
+    
+    .settings-subtitle {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        display: block;
+        font-weight: 500;
+        color: var(--rf-text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        background: var(--rf-bg-primary);
+        color: var(--rf-text-primary);
+        font-size: 0.9rem;
+        transition: border-color 0.2s ease;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--rf-primary);
+        box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+    
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .form-check-input {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--rf-border);
+        border-radius: 4px;
+        background: var(--rf-bg-primary);
+        cursor: pointer;
+    }
+    
+    .form-check-input:checked {
+        background: var(--rf-primary);
+        border-color: var(--rf-primary);
+    }
+    
+    .form-check-label {
+        color: var(--rf-text-primary);
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    
+    .form-help {
+        font-size: 0.8rem;
+        color: var(--rf-text-secondary);
+        margin-top: 0.25rem;
+    }
+    
+    .btn-save {
+        background: var(--rf-primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .btn-save:hover {
+        background: var(--rf-primary-hover);
+    }
+    
+    .btn-test {
+        background: transparent;
+        color: var(--rf-primary);
+        border: 1px solid var(--rf-primary);
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-left: 1rem;
+    }
+    
+    .btn-test:hover {
+        background: var(--rf-primary);
+        color: white;
+    }
+    
+    .platform-list {
+        background: var(--rf-bg-secondary);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .platform-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .platform-item:last-child {
+        border-bottom: none;
+    }
+    
+    .platform-name {
+        font-weight: 500;
+        color: var(--rf-text-primary);
+    }
+    
+    .platform-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+    
+    .status-online { background: #10b981; }
+    .status-offline { background: #ef4444; }
+    .status-warning { background: #f59e0b; }
+    
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid transparent;
+    }
+    
+    .alert-success {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+    
+    .alert-error {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Monitoring Einstellungen</h1>
+            <p class="text-muted">System-Überwachung und Benachrichtigungen konfigurieren</p>
+        </div>
+        <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Zurück zum Dashboard
+        </a>
+    </div>
+
+    <!-- Settings Form -->
+    <form id="settingsForm" method="post">
+        {% csrf_token %}
+        
+        <!-- Health Check Settings -->
+        <div class="settings-card">
+            <div class="settings-header">
+                <div class="settings-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <div>
+                    <h3 class="settings-title">Health Check Einstellungen</h3>
+                    <p class="settings-subtitle">Konfiguration der automatischen System-Überwachung</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="health_check_interval">Prüfintervall (Minuten)</label>
+                        <input type="number" class="form-control" id="health_check_interval" 
+                               name="health_check_interval" value="{{ settings.health_check_interval }}" 
+                               min="1" max="60">
+                        <div class="form-help">Wie oft sollen die Plattformen überprüft werden?</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label" for="response_time_threshold">Antwortzeit-Schwellwert (ms)</label>
+                        <input type="number" class="form-control" id="response_time_threshold" 
+                               name="response_time_threshold" value="{{ settings.response_time_threshold }}" 
+                               min="100" step="100">
+                        <div class="form-help">Warnung bei Überschreitung der Antwortzeit</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="error_rate_threshold">Fehlerrate-Schwellwert (%)</label>
+                <input type="number" class="form-control" id="error_rate_threshold" 
+                       name="error_rate_threshold" value="{{ settings.error_rate_threshold }}" 
+                       min="0" max="100" step="0.1">
+                <div class="form-help">Warnung bei Überschreitung der Fehlerrate</div>
+            </div>
+        </div>
+
+        <!-- Notification Settings -->
+        <div class="settings-card">
+            <div class="settings-header">
+                <div class="settings-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div>
+                    <h3 class="settings-title">Benachrichtigungen</h3>
+                    <p class="settings-subtitle">E-Mail und Slack Benachrichtigungen konfigurieren</p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="email_notifications" 
+                                   name="email_notifications" {% if settings.email_notifications %}checked{% endif %}>
+                            <label class="form-check-label" for="email_notifications">
+                                E-Mail Benachrichtigungen aktivieren
+                            </label>
+                        </div>
+                        <div class="form-help">Benachrichtigungen bei kritischen Fehlern per E-Mail</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="slack_notifications" 
+                                   name="slack_notifications" {% if settings.slack_notifications %}checked{% endif %}>
+                            <label class="form-check-label" for="slack_notifications">
+                                Slack Benachrichtigungen aktivieren
+                            </label>
+                        </div>
+                        <div class="form-help">Sofortige Benachrichtigungen über Slack</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="slack_webhook_url">Slack Webhook URL</label>
+                <input type="url" class="form-control" id="slack_webhook_url" 
+                       name="slack_webhook_url" value="{{ settings.slack_webhook_url }}" 
+                       placeholder="https://hooks.slack.com/services/...">
+                <div class="form-help">Webhook URL für Slack-Integrationen</div>
+            </div>
+            
+            <div class="d-flex align-items-center">
+                <button type="button" class="btn-test" onclick="testNotifications()">
+                    <i class="fas fa-paper-plane me-2"></i>Test-Benachrichtigung senden
+                </button>
+            </div>
+        </div>
+
+        <!-- Platform Overview -->
+        <div class="settings-card">
+            <div class="settings-header">
+                <div class="settings-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <div>
+                    <h3 class="settings-title">Überwachte Plattformen</h3>
+                    <p class="settings-subtitle">Aktueller Status aller registrierten Plattformen</p>
+                </div>
+            </div>
+            
+            <div class="platform-list">
+                {% for platform in platforms %}
+                <div class="platform-item">
+                    <div class="platform-name">
+                        <i class="fas fa-globe me-2"></i>{{ platform.name }}
+                        <small class="text-muted">({{ platform.environment }})</small>
+                    </div>
+                    <div class="platform-status">
+                        <span class="status-dot status-{% if platform.health_checks.first %}{% if platform.health_checks.first.status == 'healthy' %}online{% elif platform.health_checks.first.status == 'degraded' %}warning{% else %}offline{% endif %}{% else %}offline{% endif %}"></span>
+                        <span class="text-muted">{{ platform.base_url }}</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-3">
+                    <i class="fas fa-server fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">Keine Plattformen konfiguriert</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="d-flex justify-content-end">
+            <button type="submit" class="btn-save">
+                <i class="fas fa-save me-2"></i>Einstellungen speichern
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('settingsForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('{% url "monitoring:settings" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert('Einstellungen erfolgreich gespeichert!', 'success');
+        } else {
+            showAlert('Fehler beim Speichern der Einstellungen.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Fehler beim Speichern der Einstellungen.', 'error');
+    });
+});
+
+function testNotifications() {
+    fetch('/monitoring/api/test-notification/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert('Test-Benachrichtigung gesendet!', 'success');
+        } else {
+            showAlert('Fehler beim Senden der Test-Benachrichtigung.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Fehler beim Senden der Test-Benachrichtigung.', 'error');
+    });
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close float-end" onclick="this.parentElement.remove()"></button>
+    `;
+    
+    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.settings-card'));
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentElement) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

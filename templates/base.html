@@ -1,0 +1,81 @@
+{% extends 'base/admin_base.html' %}
+
+{% block extra_css %}
+<style>
+    /* Business-specific CSS variables */
+    :root {
+        --card-bg: var(--rf-bg-primary);
+        --border-color: var(--rf-border);
+        --text-primary: var(--rf-text-primary);
+        --text-secondary: var(--rf-text-secondary);
+        --bg-secondary: var(--rf-bg-secondary);
+        --bg-hover: rgba(255, 107, 53, 0.05);
+    }
+    
+    [data-theme="dark"] {
+        --bg-hover: rgba(255, 107, 53, 0.1);
+    }
+    
+    /* Business page specific styles */
+    .business-header {
+        background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-hover));
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .business-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 600;
+    }
+    
+    .business-header p {
+        margin: 0.5rem 0 0;
+        opacity: 0.9;
+    }
+    
+    /* Ensure proper text contrast in dark mode */
+    [data-theme="dark"] .table {
+        color: var(--rf-text-primary);
+        background-color: var(--rf-bg-primary);
+    }
+    
+    [data-theme="dark"] .table th {
+        color: var(--rf-text-primary);
+        border-color: var(--rf-border);
+    }
+    
+    [data-theme="dark"] .table td {
+        color: var(--rf-text-primary);
+        border-color: var(--rf-border);
+    }
+    
+    [data-theme="dark"] .form-control {
+        background-color: var(--rf-bg-secondary);
+        border-color: var(--rf-border);
+        color: var(--rf-text-primary);
+    }
+    
+    [data-theme="dark"] .form-select {
+        background-color: var(--rf-bg-secondary);
+        border-color: var(--rf-border);
+        color: var(--rf-text-primary);
+    }
+    
+    [data-theme="dark"] .modal-content {
+        background-color: var(--rf-bg-primary);
+        color: var(--rf-text-primary);
+    }
+    
+    [data-theme="dark"] .modal-header {
+        border-bottom-color: var(--rf-border);
+    }
+    
+    [data-theme="dark"] .modal-footer {
+        border-top-color: var(--rf-border);
+    }
+</style>
+{{ block.super }}
+{% endblock %}

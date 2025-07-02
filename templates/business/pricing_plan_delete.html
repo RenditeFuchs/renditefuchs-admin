@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Preisplan löschen - {{ plan.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 2rem auto;
+    }
+    
+    .delete-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 2rem;
+    }
+    
+    .warning-box {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 6px;
+        margin: 1.5rem 0;
+    }
+    
+    .plan-info {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .plan-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .plan-details {
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+    
+    .plan-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 0.75rem;
+        background: var(--card-bg);
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+    }
+    
+    .stat-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+    }
+    
+    .danger-icon {
+        color: #dc3545;
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-container">
+    <div class="delete-card">
+        <div class="text-center">
+            <i class="fas fa-exclamation-triangle danger-icon"></i>
+            <h1 class="h3 mb-3">Preisplan löschen</h1>
+        </div>
+        
+        <div class="warning-box">
+            <strong><i class="fas fa-exclamation-triangle"></i> Achtung!</strong><br>
+            Sie sind dabei, den Preisplan <strong>"{{ plan.name }}"</strong> permanent zu löschen. 
+            Diese Aktion kann nicht rückgängig gemacht werden.
+        </div>
+        
+        <div class="plan-info">
+            <div class="plan-name">{{ plan.name }}</div>
+            <div class="plan-details">
+                <strong>Typ:</strong> {{ plan.get_plan_type_display }} | 
+                <strong>Preis:</strong> {{ plan.get_price_display }} | 
+                <strong>Status:</strong> {% if plan.is_active %}Aktiv{% else %}Inaktiv{% endif %}
+            </div>
+            
+            {% if plan.description %}
+            <p class="text-muted">{{ plan.description|truncatewords:20 }}</p>
+            {% endif %}
+            
+            <div class="plan-stats">
+                <div class="stat-item">
+                    <div class="stat-value">{{ plan.max_users }}</div>
+                    <div class="stat-label">Benutzer</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ plan.max_projects }}</div>
+                    <div class="stat-label">Projekte</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ plan.storage_gb }}GB</div>
+                    <div class="stat-label">Speicher</div>
+                </div>
+            </div>
+        </div>
+        
+        {% if active_subscriptions > 0 %}
+        <div class="alert alert-danger">
+            <h5><i class="fas fa-ban"></i> Löschen nicht möglich</h5>
+            <p class="mb-0">
+                Dieser Preisplan kann nicht gelöscht werden, da noch <strong>{{ active_subscriptions }} aktive Abonnements</strong> 
+                vorhanden sind. Kündigen Sie zuerst alle Abonnements oder migrieren Sie sie zu einem anderen Plan.
+            </p>
+        </div>
+        
+        <div class="d-flex gap-2 justify-content-center">
+            <a href="{% url 'business:pricing_plans' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Zurück zu Preisplänen
+            </a>
+            <a href="{% url 'business:subscriptions' %}?plan={{ plan.id }}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> Abonnements anzeigen
+            </a>
+        </div>
+        
+        {% else %}
+        
+        <h4>Was passiert beim Löschen?</h4>
+        <ul class="text-muted">
+            <li>Der Preisplan wird permanent aus dem System entfernt</li>
+            <li>Er ist nicht mehr für neue Abonnements verfügbar</li>
+            <li>Bestehende Rechnungen mit Verweis auf diesen Plan bleiben erhalten</li>
+            <li>Historische Daten und Berichte werden nicht beeinträchtigt</li>
+        </ul>
+        
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="{% url 'business:pricing_plans' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Abbrechen
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Preisplan löschen
+                </button>
+            </div>
+        </form>
+        
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

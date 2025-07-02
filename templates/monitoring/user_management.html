@@ -1,0 +1,481 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}Benutzerverwaltung - RenditeFuchs Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px var(--rf-shadow);
+    }
+    
+    .user-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--rf-primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-right: 1rem;
+    }
+    
+    .user-info h5 {
+        margin: 0 0 0.25rem 0;
+        color: var(--rf-text-primary);
+        font-weight: 600;
+    }
+    
+    .user-email {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    
+    .user-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+    
+    .user-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .badge-staff {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    
+    .badge-superuser {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    
+    .badge-active {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    .badge-inactive {
+        background: rgba(107, 114, 128, 0.15);
+        color: #6b7280;
+        border: 1px solid rgba(107, 114, 128, 0.2);
+    }
+    
+    .user-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--rf-border);
+    }
+    
+    .detail-item {
+        text-align: center;
+    }
+    
+    .detail-label {
+        font-size: 0.75rem;
+        color: var(--rf-text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+    
+    .detail-value {
+        font-weight: 600;
+        color: var(--rf-text-primary);
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 4px var(--rf-shadow);
+    }
+    
+    .stats-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--rf-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-label {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .search-box {
+        position: relative;
+        margin-bottom: 2rem;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 1rem 1rem 1rem 3rem;
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        background: var(--rf-bg-primary);
+        color: var(--rf-text-primary);
+        font-size: 1rem;
+    }
+    
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--rf-text-secondary);
+    }
+    
+    .filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .filter-select {
+        padding: 0.5rem;
+        border: 1px solid var(--rf-border);
+        border-radius: 6px;
+        background: var(--rf-bg-primary);
+        color: var(--rf-text-primary);
+    }
+    
+    .pagination-wrapper {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .pagination {
+        justify-content: center;
+        margin: 0;
+    }
+    
+    .page-link {
+        color: var(--rf-text-primary);
+        background: var(--rf-bg-primary);
+        border-color: var(--rf-border);
+    }
+    
+    .page-link:hover {
+        color: var(--rf-primary);
+        background: rgba(255, 107, 53, 0.1);
+        border-color: var(--rf-primary);
+    }
+    
+    .page-item.active .page-link {
+        background: var(--rf-primary);
+        border-color: var(--rf-primary);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Benutzerverwaltung</h1>
+            <p class="text-muted">Übersicht und Verwaltung aller Systembenutzer</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/django-admin/auth/user/add/" target="_blank" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Neuer Benutzer
+            </a>
+            <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- User Statistics -->
+    <div class="stats-grid">
+        <div class="stats-card">
+            <div class="stats-value">{{ user_stats.total_users }}</div>
+            <div class="stats-label">Benutzer gesamt</div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-value">{{ user_stats.active_users }}</div>
+            <div class="stats-label">Aktive Benutzer</div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-value">{{ user_stats.staff_users }}</div>
+            <div class="stats-label">Staff-Benutzer</div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-value">{{ user_stats.superusers }}</div>
+            <div class="stats-label">Super-Admins</div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-value">{{ user_stats.recent_logins }}</div>
+            <div class="stats-label">Aktiv (30 Tage)</div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" class="search-input" placeholder="Benutzer suchen..." 
+               onkeyup="filterUsers(this.value)">
+    </div>
+    
+    <div class="filters">
+        <select class="filter-select" onchange="filterByStatus(this.value)">
+            <option value="">Alle Status</option>
+            <option value="active">Aktiv</option>
+            <option value="inactive">Inaktiv</option>
+        </select>
+        <select class="filter-select" onchange="filterByRole(this.value)">
+            <option value="">Alle Rollen</option>
+            <option value="superuser">Super-Admin</option>
+            <option value="staff">Staff</option>
+            <option value="user">Benutzer</option>
+        </select>
+        <button class="btn btn-outline-secondary" onclick="clearFilters()">
+            <i class="fas fa-times me-2"></i>Filter zurücksetzen
+        </button>
+    </div>
+
+    <!-- Users List -->
+    <div class="users-container">
+        {% for user in page_obj %}
+        <div class="user-card" data-user-id="{{ user.id }}" 
+             data-username="{{ user.username|lower }}" 
+             data-email="{{ user.email|lower }}"
+             data-status="{% if user.is_active %}active{% else %}inactive{% endif %}"
+             data-role="{% if user.is_superuser %}superuser{% elif user.is_staff %}staff{% else %}user{% endif %}">
+            
+            <div class="user-header">
+                <div class="user-avatar">
+                    {% if user.first_name %}
+                        {{ user.first_name.0 }}{{ user.last_name.0|default:'' }}
+                    {% else %}
+                        {{ user.username.0|upper }}
+                    {% endif %}
+                </div>
+                <div class="user-info flex-grow-1">
+                    <h5>
+                        {% if user.first_name or user.last_name %}
+                            {{ user.first_name }} {{ user.last_name }}
+                        {% else %}
+                            {{ user.username }}
+                        {% endif %}
+                    </h5>
+                    <p class="user-email">{{ user.email|default:"Keine E-Mail" }}</p>
+                    
+                    <div class="user-badges">
+                        {% if user.is_active %}
+                            <span class="user-badge badge-active">Aktiv</span>
+                        {% else %}
+                            <span class="user-badge badge-inactive">Inaktiv</span>
+                        {% endif %}
+                        
+                        {% if user.is_superuser %}
+                            <span class="user-badge badge-superuser">Super-Admin</span>
+                        {% elif user.is_staff %}
+                            <span class="user-badge badge-staff">Staff</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="/django-admin/auth/user/{{ user.id }}/change/" target="_blank">
+                                <i class="fas fa-edit me-2"></i>Bearbeiten
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="viewUserDetails({{ user.id }})">
+                                <i class="fas fa-eye me-2"></i>Details anzeigen
+                            </a>
+                        </li>
+                        {% if not user.is_superuser %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="#" onclick="toggleUserStatus({{ user.id }}, {{ user.is_active|yesno:'false,true' }})">
+                                <i class="fas fa-{% if user.is_active %}ban{% else %}check{% endif %} me-2"></i>
+                                {% if user.is_active %}Deaktivieren{% else %}Aktivieren{% endif %}
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="user-details">
+                <div class="detail-item">
+                    <div class="detail-label">Registriert</div>
+                    <div class="detail-value">{{ user.date_joined|date:"d.m.Y" }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Letzter Login</div>
+                    <div class="detail-value">
+                        {% if user.last_login %}
+                            {{ user.last_login|timesince }} her
+                        {% else %}
+                            Nie
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Benutzername</div>
+                    <div class="detail-value">{{ user.username }}</div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h3 class="text-muted">Keine Benutzer gefunden</h3>
+            <p class="text-muted">Versuchen Sie andere Suchkriterien oder erstellen Sie den ersten Benutzer.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-wrapper">
+        <nav aria-label="Benutzer Navigation">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">Erste</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Zurück</a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Weiter</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Letzte</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterUsers(searchTerm) {
+    const users = document.querySelectorAll('.user-card');
+    const term = searchTerm.toLowerCase();
+    
+    users.forEach(user => {
+        const username = user.dataset.username;
+        const email = user.dataset.email;
+        
+        if (username.includes(term) || email.includes(term)) {
+            user.style.display = 'block';
+        } else {
+            user.style.display = 'none';
+        }
+    });
+}
+
+function filterByStatus(status) {
+    const users = document.querySelectorAll('.user-card');
+    
+    users.forEach(user => {
+        if (!status || user.dataset.status === status) {
+            user.style.display = 'block';
+        } else {
+            user.style.display = 'none';
+        }
+    });
+}
+
+function filterByRole(role) {
+    const users = document.querySelectorAll('.user-card');
+    
+    users.forEach(user => {
+        if (!role || user.dataset.role === role) {
+            user.style.display = 'block';
+        } else {
+            user.style.display = 'none';
+        }
+    });
+}
+
+function clearFilters() {
+    document.querySelector('.search-input').value = '';
+    document.querySelectorAll('.filter-select').forEach(select => {
+        select.value = '';
+    });
+    document.querySelectorAll('.user-card').forEach(user => {
+        user.style.display = 'block';
+    });
+}
+
+function viewUserDetails(userId) {
+    window.open(`/django-admin/auth/user/${userId}/change/`, '_blank');
+}
+
+function toggleUserStatus(userId, newStatus) {
+    const action = newStatus ? 'aktivieren' : 'deaktivieren';
+    if (confirm(`Möchten Sie diesen Benutzer wirklich ${action}?`)) {
+        // Would implement AJAX call to toggle user status
+        alert('Benutzer-Status-Änderung wird in einer zukünftigen Version implementiert.');
+    }
+}
+</script>
+{% endblock %}

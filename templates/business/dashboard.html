@@ -1,0 +1,440 @@
+{% extends 'base/admin_base.html' %}
+{% load static %}
+
+{% block title %}Business Überblick{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #FF6B35 0%, #ff8c5a 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.2);
+    }
+    
+    .dashboard-title {
+        font-size: 2.5rem;
+        font-weight: 300;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .kpi-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #FF6B35, #28a745, #17a2b8, #ffc107);
+    }
+    
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .kpi-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.8;
+    }
+    
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #FF6B35, #ff8c5a);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .kpi-label {
+        font-size: 1rem;
+        color: var(--rf-text-secondary);
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+    
+    .kpi-trend {
+        font-size: 0.9rem;
+        font-weight: 500;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        display: inline-block;
+    }
+    
+    .trend-positive {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+    
+    .trend-negative {
+        background: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+    
+    .trend-neutral {
+        background: var(--rf-bg-secondary);
+        color: var(--rf-text-secondary);
+    }
+    
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .action-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        color: var(--rf-text-primary);
+    }
+    
+    .action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px var(--rf-shadow);
+        text-decoration: none;
+        color: var(--rf-text-primary);
+    }
+    
+    .action-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        color: var(--rf-primary);
+    }
+    
+    .action-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .action-desc {
+        font-size: 0.9rem;
+        color: var(--rf-text-secondary);
+    }
+    
+    .recent-section {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .section-header {
+        background: var(--rf-bg-secondary);
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--rf-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--rf-text-primary);
+    }
+    
+    .section-link {
+        color: var(--rf-primary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .section-link:hover {
+        color: var(--rf-primary-hover);
+        text-decoration: none;
+    }
+    
+    .activity-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .activity-item {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--rf-border);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: background-color 0.2s ease;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-item:hover {
+        background: rgba(255, 107, 53, 0.05);
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    
+    .icon-revenue {
+        background: rgba(255, 107, 53, 0.1);
+        color: var(--rf-primary);
+    }
+    
+    .icon-customer {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+    
+    .icon-invoice {
+        background: rgba(23, 162, 184, 0.1);
+        color: #17a2b8;
+    }
+    
+    .activity-content {
+        flex: 1;
+    }
+    
+    .activity-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: var(--rf-text-primary);
+    }
+    
+    .activity-desc {
+        font-size: 0.9rem;
+        color: var(--rf-text-secondary);
+        margin: 0;
+    }
+    
+    .activity-value {
+        text-align: right;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+    }
+    
+    .activity-time {
+        font-size: 0.8rem;
+        color: var(--rf-text-secondary);
+        text-align: right;
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-title {
+            font-size: 2rem;
+        }
+        
+        .kpi-grid {
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+        
+        .quick-actions {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <h1 class="dashboard-title">Business Überblick</h1>
+    <p class="dashboard-subtitle">Wichtigste Kennzahlen und aktuelle Aktivitäten im Überblick</p>
+</div>
+
+<!-- Key Performance Indicators -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon">
+            <i class="fas fa-euro-sign"></i>
+        </div>
+        <div class="kpi-value">€{{ revenue_metrics.current_month|floatformat:0 }}</div>
+        <div class="kpi-label">Umsatz diesen Monat</div>
+        {% if revenue_metrics.growth_rate > 0 %}
+            <span class="kpi-trend trend-positive">
+                <i class="fas fa-arrow-up"></i> +{{ revenue_metrics.growth_rate }}%
+            </span>
+        {% elif revenue_metrics.growth_rate < 0 %}
+            <span class="kpi-trend trend-negative">
+                <i class="fas fa-arrow-down"></i> {{ revenue_metrics.growth_rate }}%
+            </span>
+        {% else %}
+            <span class="kpi-trend trend-neutral">
+                <i class="fas fa-minus"></i> 0%
+            </span>
+        {% endif %}
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="kpi-value">{{ customer_metrics.total }}</div>
+        <div class="kpi-label">Kunden gesamt</div>
+        <span class="kpi-trend trend-positive">
+            <i class="fas fa-plus"></i> {{ customer_metrics.new_this_month }} neue
+        </span>
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-icon">
+            <i class="fas fa-sync-alt"></i>
+        </div>
+        <div class="kpi-value">{{ subscription_metrics.active }}</div>
+        <div class="kpi-label">Aktive Abonnements</div>
+        {% if subscription_metrics.canceled_this_month > 0 %}
+            <span class="kpi-trend trend-negative">
+                <i class="fas fa-minus"></i> {{ subscription_metrics.canceled_this_month }} gekündigt
+            </span>
+        {% else %}
+            <span class="kpi-trend trend-positive">
+                <i class="fas fa-check"></i> Keine Kündigungen
+            </span>
+        {% endif %}
+    </div>
+    
+    <div class="kpi-card">
+        <div class="kpi-icon">
+            <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <div class="kpi-value">{{ invoice_metrics.pending }}</div>
+        <div class="kpi-label">Offene Rechnungen</div>
+        {% if invoice_metrics.overdue > 0 %}
+            <span class="kpi-trend trend-negative">
+                <i class="fas fa-exclamation-triangle"></i> {{ invoice_metrics.overdue }} überfällig
+            </span>
+        {% else %}
+            <span class="kpi-trend trend-positive">
+                <i class="fas fa-check"></i> Alle pünktlich
+            </span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+    <a href="{% url 'business:pricing_plan_create' %}" class="action-card">
+        <div class="action-icon">
+            <i class="fas fa-plus"></i>
+        </div>
+        <div class="action-title">Neuer Preisplan</div>
+        <div class="action-desc">Plan erstellen</div>
+    </a>
+    
+    <a href="{% url 'business:invoice_create' %}" class="action-card">
+        <div class="action-icon">
+            <i class="fas fa-file-invoice"></i>
+        </div>
+        <div class="action-title">Rechnung erstellen</div>
+        <div class="action-desc">Neue Rechnung</div>
+    </a>
+    
+    <a href="{% url 'business:customers' %}" class="action-card">
+        <div class="action-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="action-title">Kunden verwalten</div>
+        <div class="action-desc">{{ customer_metrics.total }} Kunden</div>
+    </a>
+    
+    <a href="{% url 'business:analytics' %}" class="action-card">
+        <div class="action-icon">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="action-title">Analytics</div>
+        <div class="action-desc">Revenue-Reports</div>
+    </a>
+</div>
+
+<!-- Recent Activity Summary -->
+<div class="recent-section">
+    <div class="section-header">
+        <h3 class="section-title">Aktuelle Aktivitäten</h3>
+        <a href="{% url 'business:subscriptions' %}" class="section-link">
+            Alle anzeigen <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+    
+    <div class="activity-list">
+        {% for subscription in recent_subscriptions|slice:":5" %}
+        <div class="activity-item">
+            <div class="activity-icon icon-customer">
+                <i class="fas fa-user-plus"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-title">{{ subscription.customer.get_display_name }}</div>
+                <div class="activity-desc">{{ subscription.plan.name }} Abonnement</div>
+            </div>
+            <div>
+                <div class="activity-value">€{{ subscription.plan.price|floatformat:0 }}</div>
+                <div class="activity-time">{{ subscription.created_at|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="activity-item">
+            <div class="activity-icon icon-customer">
+                <i class="fas fa-info-circle"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-title">Keine Aktivitäten</div>
+                <div class="activity-desc">Erstellen Sie Ihren ersten Preisplan</div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {% for invoice in recent_invoices|slice:":3" %}
+        <div class="activity-item">
+            <div class="activity-icon icon-invoice">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-title">{{ invoice.invoice_number }}</div>
+                <div class="activity-desc">{{ invoice.customer.get_display_name }}</div>
+            </div>
+            <div>
+                <div class="activity-value">€{{ invoice.total_amount|floatformat:0 }}</div>
+                <div class="activity-time">{{ invoice.issue_date|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
