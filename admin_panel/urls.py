@@ -16,16 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.shortcuts import redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth import views as auth_views
+from .views import custom_login, dashboard_redirect
 
-@login_required
-def dashboard_redirect(request):
-    """Redirect root to monitoring dashboard"""
-    return redirect('monitoring:dashboard')
+# Disable Django admin login redirect
+admin.site.login = custom_login
 
 urlpatterns = [
     path('', dashboard_redirect, name='root'),
+    path('login/', custom_login, name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
     path('django-admin/', admin.site.urls),  # Keep Django admin as fallback
     path('monitoring/', include('monitoring.urls')),
     path('business/', include('business.urls')),

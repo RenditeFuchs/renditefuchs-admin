@@ -78,3 +78,6 @@ htmlcov/
 *.pid
 *.sock
 .vagrant/
+
+# Local development scripts - NEVER push to server!
+start_admin.sh

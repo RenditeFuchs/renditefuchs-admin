@@ -1,346 +1,131 @@
 <!DOCTYPE html>
-<html lang="de" data-theme="light">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - RenditeFuchs</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
     <style>
-        :root {
-            --rf-primary: #FF6B35;
-            --rf-primary-dark: #E55A2B;
-            --rf-secondary: #2C3E50;
-            --rf-bg-light: #F8F9FA;
-            --rf-bg-dark: #1A1A1A;
-            --rf-text-light: #333333;
-            --rf-text-dark: #FFFFFF;
-            --rf-card-light: #FFFFFF;
-            --rf-card-dark: #2C2C2C;
-            --rf-border-light: #E9ECEF;
-            --rf-border-dark: #404040;
-        }
-
-        [data-theme="dark"] {
-            --rf-bg: var(--rf-bg-dark);
-            --rf-text: var(--rf-text-dark);
-            --rf-card: var(--rf-card-dark);
-            --rf-border: var(--rf-border-dark);
-        }
-
-        [data-theme="light"] {
-            --rf-bg: var(--rf-bg-light);
-            --rf-text: var(--rf-text-light);
-            --rf-card: var(--rf-card-light);
-            --rf-border: var(--rf-border-light);
-        }
-
         body {
-            background: linear-gradient(135deg, var(--rf-primary) 0%, var(--rf-secondary) 100%);
+            background: linear-gradient(135deg, #FF6B35 0%, #2C3E50 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: var(--rf-text);
         }
-
-        .login-container {
-            max-width: 400px;
-            width: 100%;
-            padding: 20px;
-        }
-
+        
         .login-card {
-            background: var(--rf-card);
+            background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
             padding: 3rem 2rem;
-            border: 1px solid var(--rf-border);
-            backdrop-filter: blur(10px);
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 400px;
         }
-
-        .login-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--rf-primary), var(--rf-secondary));
-        }
-
-        .login-header {
+        
+        .logo {
             text-align: center;
             margin-bottom: 2rem;
         }
-
-        .logo {
-            background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-dark));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 2.5rem;
+        
+        .logo h1 {
+            color: #FF6B35;
+            font-size: 2rem;
             font-weight: bold;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 2px 4px rgba(255, 107, 53, 0.2);
-        }
-
-        .login-subtitle {
-            color: #6C757D;
-            font-size: 0.95rem;
-            margin-bottom: 0;
-        }
-
-        .form-floating {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-floating .form-control {
-            background: var(--rf-bg);
-            border: 2px solid var(--rf-border);
-            border-radius: 12px;
-            padding: 1rem 0.75rem;
-            height: auto;
-            color: var(--rf-text);
-            transition: all 0.3s ease;
-        }
-
-        .form-floating .form-control:focus {
-            border-color: var(--rf-primary);
-            box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
-            background: var(--rf-card);
-        }
-
-        .form-floating label {
-            color: #6C757D;
-            padding: 1rem 0.75rem;
-        }
-
-        .btn-login {
-            background: linear-gradient(135deg, var(--rf-primary), var(--rf-primary-dark));
-            border: none;
-            border-radius: 12px;
-            padding: 0.875rem 2rem;
-            font-weight: 600;
-            color: white;
-            width: 100%;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(255, 107, 53, 0.3);
-            background: linear-gradient(135deg, var(--rf-primary-dark), var(--rf-primary));
-        }
-
-        .btn-login:active {
-            transform: translateY(0);
-        }
-
-        .btn-login::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .btn-login:hover::before {
-            left: 100%;
-        }
-
-        .theme-toggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: var(--rf-card);
-            border: 1px solid var(--rf-border);
-            border-radius: 50%;
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: var(--rf-text);
-        }
-
-        .theme-toggle:hover {
-            background: var(--rf-primary);
-            color: white;
-            transform: scale(1.1);
-        }
-
-        .alert {
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
-            border: none;
-        }
-
-        .alert-danger {
-            background: rgba(220, 53, 69, 0.1);
-            color: #DC3545;
-            border-left: 4px solid #DC3545;
-        }
-
-        .security-info {
-            background: rgba(255, 107, 53, 0.1);
-            border: 1px solid rgba(255, 107, 53, 0.2);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-top: 1.5rem;
-            text-align: center;
-        }
-
-        .security-info i {
-            color: var(--rf-primary);
-            font-size: 1.2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .security-info p {
-            color: #6C757D;
-            font-size: 0.85rem;
             margin: 0;
         }
-
-        @media (max-width: 576px) {
-            .login-container {
-                padding: 10px;
-            }
-            
-            .login-card {
-                padding: 2rem 1.5rem;
-            }
-            
-            .logo {
-                font-size: 2rem;
-            }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #FF6B35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #FF6B35, #E55A2B);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(255, 107, 53, 0.3);
+        }
+        
+        .alert {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: #dc3545;
         }
     </style>
 </head>
 <body>
-    <!-- Theme Toggle -->
-    <div class="theme-toggle" onclick="toggleTheme()">
-        <i class="fas fa-moon" id="theme-icon"></i>
-    </div>
-
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <div class="logo">
-                    <i class="fas fa-chart-line"></i> RenditeFuchs
-                </div>
-                <p class="login-subtitle">Admin Dashboard</p>
-            </div>
-
-            {% if form.errors %}
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Ungültige Anmeldedaten. Bitte versuchen Sie es erneut.
-                </div>
-            {% endif %}
-
-            <form method="post">
-                {% csrf_token %}
-                
-                <div class="form-floating">
-                    <input type="text" 
-                           class="form-control" 
-                           id="id_username" 
-                           name="username" 
-                           placeholder="Benutzername"
-                           value="{{ form.username.value|default:'' }}"
-                           required
-                           autocomplete="username">
-                    <label for="id_username">
-                        <i class="fas fa-user me-2"></i>Benutzername
-                    </label>
-                </div>
-
-                <div class="form-floating">
-                    <input type="password" 
-                           class="form-control" 
-                           id="id_password" 
-                           name="password" 
-                           placeholder="Passwort"
-                           required
-                           autocomplete="current-password">
-                    <label for="id_password">
-                        <i class="fas fa-lock me-2"></i>Passwort
-                    </label>
-                </div>
-
-                <button type="submit" class="btn btn-login">
-                    <i class="fas fa-sign-in-alt me-2"></i>
-                    Anmelden
-                </button>
-
-                <input type="hidden" name="next" value="{{ next }}">
-            </form>
-
-            <div class="security-info">
-                <i class="fas fa-shield-alt"></i>
-                <p>Sichere Verbindung • SSL-verschlüsselt</p>
-            </div>
+    <div class="login-card">
+        <div class="logo">
+            <h1><i class="fas fa-chart-line"></i> RenditeFuchs</h1>
+            <p>Admin Dashboard</p>
         </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <input type="text" 
+                       class="form-control" 
+                       name="username" 
+                       placeholder="Benutzername"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <input type="password" 
+                       class="form-control" 
+                       name="password" 
+                       placeholder="Passwort"
+                       required>
+            </div>
+
+            <button type="submit" class="btn-login">
+                <i class="fas fa-sign-in-alt"></i> Anmelden
+            </button>
+
+            <input type="hidden" name="next" value="{{ next }}">
+        </form>
     </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-        // Theme Toggle Functionality
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            const icon = document.getElementById('theme-icon');
-            
-            html.setAttribute('data-theme', newTheme);
-            icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-            
-            // Save theme preference
-            localStorage.setItem('admin-theme', newTheme);
-        }
-
-        // Load saved theme
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedTheme = localStorage.getItem('admin-theme') || 'light';
-            const html = document.documentElement;
-            const icon = document.getElementById('theme-icon');
-            
-            html.setAttribute('data-theme', savedTheme);
-            icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-            
-            // Auto-focus username field
-            document.getElementById('id_username').focus();
-        });
-
-        // Add some subtle animations on form interaction
-        document.querySelectorAll('.form-control').forEach(input => {
-            input.addEventListener('focus', function() {
-                this.parentElement.style.transform = 'translateY(-2px)';
-            });
-            
-            input.addEventListener('blur', function() {
-                this.parentElement.style.transform = 'translateY(0)';
-            });
-        });
-    </script>
 </body>
 </html>

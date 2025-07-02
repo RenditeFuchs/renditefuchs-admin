@@ -86,9 +86,9 @@ ADMIN_DASHBOARD_TITLE = 'RenditeFuchs Admin Dashboard'
 ADMIN_SITE_HEADER = 'RenditeFuchs Platform Administration'
 
 # Authentication Settings
-LOGIN_URL = '/django-admin/login/'
+LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/django-admin/login/'
+LOGOUT_REDIRECT_URL = '/login/'
 
 # Logging Configuration
 LOGGING = {
