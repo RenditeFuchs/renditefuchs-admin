@@ -33,12 +33,12 @@ fi
 
 echo ""
 echo "✅ Starting Admin Dashboard server..."
-echo "🎛️  Admin Dashboard: http://127.0.0.1:8003"
+echo "🎛️  Admin Dashboard: http://127.0.0.1:8005"
 echo "📊 Monitoring: System Health für alle RenditeFuchs Apps"
-echo "🔧 Django Admin: http://127.0.0.1:8003/django-admin"
+echo "🔧 Django Admin: http://127.0.0.1:8005/django-admin"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo "================================================"
 
-# Start the development server on port 8003
-python manage.py runserver 127.0.0.1:8003
+# Start the development server on port 8005 (avoid conflicts)
+python manage.py runserver 127.0.0.1:8005
