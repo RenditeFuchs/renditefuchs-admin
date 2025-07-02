@@ -16,7 +16,7 @@ if ENVIRONMENT == 'local':
 else:
     ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='admin.renditefuchs.de', cast=lambda v: [s.strip() for s in v.split(',')])
 
-# HTTPS Configuration for production
+# HTTPS Configuration - only for production environment
 if ENVIRONMENT == 'production':
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -28,6 +28,11 @@ if ENVIRONMENT == 'production':
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://admin.renditefuchs.de', cast=lambda v: [s.strip() for s in v.split(',')])
+else:
+    # Local development - no HTTPS redirects
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
 INSTALLED_APPS = [
     'django.contrib.admin',
