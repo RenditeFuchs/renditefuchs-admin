@@ -18,12 +18,7 @@ class CustomUserAdmin(UserAdmin):
     search_fields = ('username', 'first_name', 'last_name', 'email')
     ordering = ('-date_joined',)
     
-    fieldsets = UserAdmin.fieldsets + (
-        ('Admin Dashboard Permissions', {
-            'fields': ('is_staff', 'is_superuser'),
-            'description': 'Berechtigungen für das RenditeFuchs Admin Dashboard'
-        }),
-    )
+    # Remove duplicate fields from permissions section
 
 # Re-register User with custom admin
 admin.site.unregister(User)
