@@ -15,7 +15,8 @@ from django.core.paginator import Paginator
 
 from .models import (
     Platform, SystemHealth, ErrorLog, Alert, 
-    PerformanceMetric, MonitoringSettings
+    PerformanceMetric, MonitoringSettings,
+    FileOperation, SecurityLog, ServerPath
 )
 import logging
 

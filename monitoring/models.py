@@ -240,6 +240,256 @@ class Alert(models.Model):
         self.save()
 
 
+class FileOperation(models.Model):
+    """Tracks all file operations for security audit trail"""
+    OPERATION_CHOICES = [
+        ('read', 'Datei gelesen'),
+        ('write', 'Datei geschrieben'),
+        ('delete', 'Datei gelöscht'),
+        ('create', 'Datei erstellt'),
+        ('rename', 'Datei umbenannt'),
+        ('copy', 'Datei kopiert'),
+        ('move', 'Datei verschoben'),
+        ('list', 'Verzeichnis aufgelistet'),
+        ('upload', 'Datei hochgeladen'),
+        ('download', 'Datei heruntergeladen'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('success', 'Erfolgreich'),
+        ('failed', 'Fehlgeschlagen'),
+        ('blocked', 'Blockiert'),
+        ('unauthorized', 'Nicht autorisiert'),
+    ]
+    
+    # Operation details
+    operation = models.CharField(max_length=20, choices=OPERATION_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    file_path = models.CharField(max_length=1000)
+    original_path = models.CharField(max_length=1000, blank=True)  # For rename/move operations
+    file_size = models.BigIntegerField(null=True, blank=True)
+    file_type = models.CharField(max_length=100, blank=True)
+    
+    # User and session information
+    user_id = models.CharField(max_length=100)
+    username = models.CharField(max_length=150)
+    session_id = models.CharField(max_length=255, blank=True)
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.CharField(max_length=500, blank=True)
+    
+    # Security context
+    security_level = models.CharField(max_length=20, default='normal')
+    risk_score = models.IntegerField(default=0)  # 0-100 risk assessment
+    blocked_reason = models.TextField(blank=True)
+    
+    # Metadata
+    metadata = models.JSONField(default=dict, blank=True)
+    error_message = models.TextField(blank=True)
+    execution_time = models.FloatField(null=True, blank=True)  # milliseconds
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Dateioperation"
+        verbose_name_plural = "Dateioperationen"
+        indexes = [
+            models.Index(fields=['user_id', '-created_at']),
+            models.Index(fields=['operation', 'status', '-created_at']),
+            models.Index(fields=['file_path', '-created_at']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['security_level', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.username} - {self.operation} - {self.file_path} ({self.status})"
+    
+    def is_high_risk(self):
+        """Check if operation is considered high risk"""
+        return self.risk_score >= 70
+    
+    def get_relative_path(self):
+        """Get relative path for display"""
+        if self.file_path.startswith('/var/www/'):
+            return self.file_path.replace('/var/www/', '')
+        return self.file_path
+
+
+class SecurityLog(models.Model):
+    """Logs security events and incidents"""
+    EVENT_TYPE_CHOICES = [
+        ('login_success', 'Erfolgreiche Anmeldung'),
+        ('login_failed', 'Fehlgeschlagene Anmeldung'),
+        ('unauthorized_access', 'Unbefugter Zugriff'),
+        ('suspicious_activity', 'Verdächtige Aktivität'),
+        ('permission_denied', 'Zugriff verweigert'),
+        ('path_traversal', 'Pfad-Traversal-Versuch'),
+        ('malicious_file', 'Schädliche Datei erkannt'),
+        ('rate_limit_exceeded', 'Rate-Limit überschritten'),
+        ('ssh_connection', 'SSH-Verbindung'),
+        ('file_access_denied', 'Dateizugriff verweigert'),
+        ('admin_action', 'Administrator-Aktion'),
+        ('system_alert', 'System-Warnung'),
+    ]
+    
+    SEVERITY_CHOICES = [
+        ('info', 'Information'),
+        ('warning', 'Warnung'),
+        ('error', 'Fehler'),
+        ('critical', 'Kritisch'),
+    ]
+    
+    # Event details
+    event_type = models.CharField(max_length=30, choices=EVENT_TYPE_CHOICES)
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES)
+    message = models.TextField()
+    details = models.JSONField(default=dict, blank=True)
+    
+    # User and session
+    user_id = models.CharField(max_length=100, blank=True)
+    username = models.CharField(max_length=150, blank=True)
+    session_id = models.CharField(max_length=255, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    
+    # Context
+    file_path = models.CharField(max_length=1000, blank=True)
+    url_path = models.CharField(max_length=500, blank=True)
+    request_method = models.CharField(max_length=10, blank=True)
+    
+    # Related objects
+    related_file_operation = models.ForeignKey(
+        FileOperation, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='security_logs'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Sicherheitsprotokoll"
+        verbose_name_plural = "Sicherheitsprotokolle"
+        indexes = [
+            models.Index(fields=['event_type', '-created_at']),
+            models.Index(fields=['severity', '-created_at']),
+            models.Index(fields=['user_id', '-created_at']),
+            models.Index(fields=['ip_address', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.event_type} - {self.severity} - {self.created_at}"
+    
+    def is_security_incident(self):
+        """Check if this is a security incident requiring attention"""
+        return self.severity in ['error', 'critical'] or self.event_type in [
+            'unauthorized_access', 'suspicious_activity', 'path_traversal', 'malicious_file'
+        ]
+
+
+class ServerPath(models.Model):
+    """Configuration for allowed server paths and access levels"""
+    PATH_TYPE_CHOICES = [
+        ('allowed', 'Erlaubter Pfad'),
+        ('restricted', 'Eingeschränkter Pfad'),
+        ('forbidden', 'Verbotener Pfad'),
+        ('whitelist', 'Whitelist-Pfad'),
+    ]
+    
+    ACCESS_LEVEL_CHOICES = [
+        ('read', 'Nur Lesen'),
+        ('write', 'Lesen und Schreiben'),
+        ('execute', 'Ausführen'),
+        ('admin', 'Administrator'),
+        ('none', 'Kein Zugriff'),
+    ]
+    
+    # Path configuration
+    path = models.CharField(max_length=1000, unique=True)
+    path_type = models.CharField(max_length=20, choices=PATH_TYPE_CHOICES)
+    access_level = models.CharField(max_length=20, choices=ACCESS_LEVEL_CHOICES)
+    
+    # Permissions
+    allow_read = models.BooleanField(default=True)
+    allow_write = models.BooleanField(default=False)
+    allow_delete = models.BooleanField(default=False)
+    allow_execute = models.BooleanField(default=False)
+    allow_list = models.BooleanField(default=True)
+    
+    # File type restrictions
+    allowed_extensions = models.JSONField(default=list, blank=True)
+    forbidden_extensions = models.JSONField(default=list, blank=True)
+    max_file_size = models.BigIntegerField(null=True, blank=True)  # bytes
+    
+    # Security settings
+    require_admin = models.BooleanField(default=False)
+    require_confirmation = models.BooleanField(default=False)
+    risk_level = models.CharField(max_length=10, default='low')
+    
+    # Metadata
+    description = models.TextField(blank=True)
+    created_by = models.CharField(max_length=150, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['path']
+        verbose_name = "Server-Pfad"
+        verbose_name_plural = "Server-Pfade"
+        indexes = [
+            models.Index(fields=['path_type', 'is_active']),
+            models.Index(fields=['access_level', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.path} ({self.path_type})"
+    
+    def allows_operation(self, operation):
+        """Check if path allows specific operation"""
+        if not self.is_active:
+            return False
+            
+        operation_map = {
+            'read': self.allow_read,
+            'write': self.allow_write,
+            'delete': self.allow_delete,
+            'execute': self.allow_execute,
+            'list': self.allow_list,
+        }
+        
+        return operation_map.get(operation, False)
+    
+    def is_file_allowed(self, filename):
+        """Check if file type is allowed"""
+        if not filename:
+            return True
+            
+        file_ext = filename.split('.')[-1].lower() if '.' in filename else ''
+        
+        # Check forbidden extensions first
+        if self.forbidden_extensions and file_ext in self.forbidden_extensions:
+            return False
+            
+        # Check allowed extensions
+        if self.allowed_extensions and file_ext not in self.allowed_extensions:
+            return False
+            
+        return True
+    
+    def get_relative_path(self):
+        """Get relative path for display"""
+        if self.path.startswith('/var/www/'):
+            return self.path.replace('/var/www/', '')
+        return self.path
+
+
 class MonitoringSettings(models.Model):
     """Global monitoring configuration"""
     # Health check intervals (in minutes)
@@ -262,6 +512,19 @@ class MonitoringSettings(models.Model):
     health_data_retention = models.IntegerField(default=30)
     error_data_retention = models.IntegerField(default=90)
     performance_data_retention = models.IntegerField(default=30)
+    
+    # Server directory security settings
+    server_directory_enabled = models.BooleanField(default=False)
+    ssh_key_path = models.CharField(max_length=500, default='~/.ssh/id_rsa')
+    ssh_host = models.CharField(max_length=255, default='193.108.55.82')
+    ssh_user = models.CharField(max_length=100, default='ubuntu')
+    ssh_port = models.IntegerField(default=22)
+    
+    # Security settings
+    max_file_operations_per_hour = models.IntegerField(default=100)
+    enable_audit_logging = models.BooleanField(default=True)
+    require_admin_for_sensitive_paths = models.BooleanField(default=True)
+    auto_block_suspicious_activity = models.BooleanField(default=True)
     
     updated_at = models.DateTimeField(auto_now=True)
     
