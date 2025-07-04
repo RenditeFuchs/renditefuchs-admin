@@ -818,55 +818,131 @@ function showInfo(message) {
 
 // Debug functions
 function runDebugTests() {
-    showInfo('Führe Debug-Tests durch...');
+    showInfo('Debug-Tests werden ausgeführt...');
     
-    // Test 1: Configuration
-    fetch('/monitoring/debug/config/')
+    const tests = [
+        { name: 'API Verbindung', test: testAPIConnection },
+        { name: 'Verzeichnis laden', test: testDirectoryLoad },
+        { name: 'SSH Verbindung', test: testSSHConnection },
+        { name: 'Berechtigungen', test: testPermissions }
+    ];
+    
+    let results = [];
+    let completed = 0;
+    
+    tests.forEach((test, index) => {
+        setTimeout(() => {
+            test.test().then(result => {
+                results.push({ name: test.name, ...result });
+                completed++;
+                
+                if (completed === tests.length) {
+                    showDebugResults(results);
+                }
+            }).catch(error => {
+                results.push({ 
+                    name: test.name, 
+                    success: false, 
+                    message: error.message || 'Unbekannter Fehler' 
+                });
+                completed++;
+                
+                if (completed === tests.length) {
+                    showDebugResults(results);
+                }
+            });
+        }, index * 500); // Stagger tests
+    });
+}
+
+function testAPIConnection() {
+    return fetch('/monitoring/api/debug/config/')
         .then(response => response.json())
         .then(data => {
-            console.log('Debug Config:', data);
             if (data.success) {
-                showSuccess('Konfiguration: OK');
-                
-                // Test 2: SSH Connection
-                return fetch('/monitoring/debug/ssh/');
+                return { success: true, message: 'API und Konfiguration OK' };
             } else {
-                showError('Konfigurationsfehler: ' + JSON.stringify(data));
-                throw new Error('Config failed');
+                return { success: false, message: data.error || 'Konfigurationsfehler' };
             }
         })
+        .catch(() => {
+            return { success: false, message: 'Verbindung fehlgeschlagen' };
+        });
+}
+
+function testDirectoryLoad() {
+    return fetch('/monitoring/api/server/directory/?path=/var/www')
         .then(response => response.json())
         .then(data => {
-            console.log('SSH Test:', data);
             if (data.success) {
-                showSuccess('SSH-Verbindung: OK');
-                
-                // Test 3: Directory listing
-                return fetch('/monitoring/debug/directory/?path=/var/www');
+                return { success: true, message: `${data.total_items} Elemente gefunden` };
             } else {
-                showError('SSH-Verbindungsfehler: ' + data.error);
-                throw new Error('SSH failed');
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Directory Test:', data);
-            if (data.success) {
-                showSuccess('Verzeichnis-Listing: OK (' + data.count + ' Elemente)');
-                showInfo('Alle Tests erfolgreich! Versuche normale Funktion...');
-                
-                // Try normal function
-                setTimeout(() => {
-                    loadDirectory('/var/www');
-                }, 1000);
-            } else {
-                showError('Verzeichnis-Listing-Fehler: ' + data.error);
+                return { success: false, message: data.error || 'Unbekannter Fehler' };
             }
         })
         .catch(error => {
-            console.error('Debug test error:', error);
-            showError('Debug-Test fehlgeschlagen: ' + error.message);
+            return { success: false, message: error.message };
         });
+}
+
+function testSSHConnection() {
+    return fetch('/monitoring/api/debug/ssh/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                return { success: true, message: 'SSH-Verbindung OK' };
+            } else {
+                return { success: false, message: data.error || 'SSH-Fehler' };
+            }
+        })
+        .catch(error => {
+            return { success: false, message: 'SSH-Verbindung fehlgeschlagen' };
+        });
+}
+
+function testPermissions() {
+    // Check if user has proper permissions
+    if (!document.body.getAttribute('data-user-superuser')) {
+        return Promise.resolve({ 
+            success: false, 
+            message: 'Superuser-Berechtigung erforderlich' 
+        });
+    }
+    
+    return Promise.resolve({ 
+        success: true, 
+        message: 'Berechtigungen OK' 
+    });
+}
+
+function showDebugResults(results) {
+    let html = '<div class="debug-results"><h5>Debug-Testergebnisse:</h5><ul class="list-group">';
+    
+    results.forEach(result => {
+        const icon = result.success ? 
+            '<i class="fas fa-check-circle text-success"></i>' : 
+            '<i class="fas fa-times-circle text-danger"></i>';
+        
+        html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    ${icon}
+                    <span class="ms-2">${result.name}</span>
+                </div>
+                <small class="text-muted">${result.message}</small>
+            </li>
+        `;
+    });
+    
+    html += '</ul></div>';
+    
+    // Show in modal or alert
+    const allPassed = results.every(r => r.success);
+    if (allPassed) {
+        showSuccess('Alle Debug-Tests erfolgreich! ' + html);
+    } else {
+        showError('Einige Debug-Tests fehlgeschlagen! ' + html);
+    }
 }
 </script>
 {% endblock %}

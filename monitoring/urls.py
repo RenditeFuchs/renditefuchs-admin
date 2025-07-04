@@ -5,6 +5,10 @@ from .server_api import (
     file_delete_api, file_upload_api
 )
 from . import debug_views
+from .debug_api import (
+    debug_config_api, debug_ssh_api, debug_directory_api,
+    debug_security_api, debug_full_test_api
+)
 
 app_name = 'monitoring'
 
@@ -58,4 +62,11 @@ urlpatterns = [
     path('debug/config/', debug_views.debug_config, name='debug_config'),
     path('debug/ssh/', debug_views.test_ssh_connection, name='debug_ssh'),
     path('debug/directory/', debug_views.test_directory_listing, name='debug_directory'),
+    
+    # New Debug API endpoints
+    path('api/debug/config/', debug_config_api, name='debug_config_api'),
+    path('api/debug/ssh/', debug_ssh_api, name='debug_ssh_api'),
+    path('api/debug/directory/', debug_directory_api, name='debug_directory_api'),
+    path('api/debug/security/', debug_security_api, name='debug_security_api'),
+    path('api/debug/full/', debug_full_test_api, name='debug_full_test_api'),
 ]
