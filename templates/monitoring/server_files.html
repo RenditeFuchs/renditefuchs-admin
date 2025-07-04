@@ -1,0 +1,816 @@
+{% extends 'base/admin_base.html' %}
+{% load static %}
+
+{% block title %}Server Dateien - RENDITEFUCHS Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .file-browser {
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .file-browser-header {
+        background: var(--bs-primary);
+        color: white;
+        padding: 15px;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    
+    .breadcrumb-nav {
+        background: var(--bs-light);
+        padding: 10px 15px;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+    
+    .breadcrumb-nav .breadcrumb {
+        margin: 0;
+        background: none;
+        padding: 0;
+    }
+    
+    .file-list {
+        min-height: 400px;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .file-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--bs-border-color);
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .file-item:hover {
+        background: var(--bs-light);
+    }
+    
+    .file-item.selected {
+        background: var(--bs-primary-subtle);
+    }
+    
+    .file-icon {
+        width: 20px;
+        text-align: center;
+        margin-right: 10px;
+        color: var(--bs-secondary);
+    }
+    
+    .file-info {
+        flex: 1;
+    }
+    
+    .file-name {
+        font-weight: 500;
+        color: var(--bs-body-color);
+        margin: 0;
+    }
+    
+    .file-meta {
+        font-size: 0.875rem;
+        color: var(--bs-secondary);
+        margin: 0;
+    }
+    
+    .file-size {
+        color: var(--bs-secondary);
+        font-size: 0.875rem;
+        margin-left: 15px;
+    }
+    
+    .file-actions {
+        margin-left: 15px;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .editor-container {
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-top: 20px;
+    }
+    
+    .editor-header {
+        background: var(--bs-secondary);
+        color: white;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    
+    .editor-content {
+        padding: 15px;
+    }
+    
+    .code-editor {
+        width: 100%;
+        min-height: 400px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        border: 1px solid var(--bs-border-color);
+        border-radius: 4px;
+        padding: 15px;
+        background: var(--bs-body-bg);
+        color: var(--bs-body-color);
+        resize: vertical;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: var(--bs-secondary);
+    }
+    
+    .upload-area {
+        border: 2px dashed var(--bs-border-color);
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        margin-bottom: 20px;
+        transition: border-color 0.3s;
+    }
+    
+    .upload-area.dragover {
+        border-color: var(--bs-primary);
+        background: var(--bs-primary-subtle);
+    }
+    
+    .modal-lg {
+        max-width: 90vw;
+    }
+    
+    .alert {
+        margin-bottom: 0;
+    }
+    
+    .stats-bar {
+        background: var(--bs-light);
+        padding: 8px 15px;
+        font-size: 0.875rem;
+        color: var(--bs-secondary);
+        border-top: 1px solid var(--bs-border-color);
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Dark theme adjustments */
+    [data-theme="dark"] .breadcrumb-nav {
+        background: var(--bs-dark);
+    }
+    
+    [data-theme="dark"] .file-item:hover {
+        background: var(--bs-dark);
+    }
+    
+    [data-theme="dark"] .stats-bar {
+        background: var(--bs-dark);
+    }
+    
+    [data-theme="dark"] .upload-area {
+        border-color: var(--bs-border-color);
+    }
+    
+    [data-theme="dark"] .upload-area.dragover {
+        background: var(--bs-primary-bg-subtle);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-server me-2"></i>
+                    Server Dateien
+                </h1>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-primary" onclick="refreshBrowser()">
+                        <i class="fas fa-refresh"></i> Aktualisieren
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="showUploadModal()">
+                        <i class="fas fa-upload"></i> Hochladen
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="createNewFile()">
+                        <i class="fas fa-plus"></i> Neue Datei
+                    </button>
+                </div>
+            </div>
+            
+            <!-- File Browser -->
+            <div class="file-browser">
+                <div class="file-browser-header">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-folder-open me-2"></i>
+                        <span id="current-path-display">{{ current_path }}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-sm btn-outline-light me-2" onclick="goUp()">
+                            <i class="fas fa-arrow-up"></i> Zurück
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="goHome()">
+                            <i class="fas fa-home"></i> Home
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="breadcrumb-nav">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb" id="breadcrumb-nav">
+                            <li class="breadcrumb-item"><a href="#" onclick="navigateToPath('/')">/</a></li>
+                        </ol>
+                    </nav>
+                </div>
+                
+                <div class="file-list" id="file-list">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Lade Verzeichnis...
+                    </div>
+                </div>
+                
+                <div class="stats-bar" id="stats-bar">
+                    Bereit
+                </div>
+            </div>
+            
+            <!-- File Editor -->
+            <div class="editor-container" id="editor-container" style="display: none;">
+                <div class="editor-header">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-edit me-2"></i>
+                        <span id="editor-filename">Datei</span>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-sm btn-success" onclick="saveFile()">
+                            <i class="fas fa-save"></i> Speichern
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="closeEditor()">
+                            <i class="fas fa-times"></i> Schließen
+                        </button>
+                    </div>
+                </div>
+                <div class="editor-content">
+                    <textarea class="code-editor" id="file-content" placeholder="Dateiinhalt wird hier angezeigt..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dateien hochladen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-area" id="upload-area">
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-3"></i>
+                    <h5>Dateien hierhin ziehen oder klicken zum Auswählen</h5>
+                    <p class="text-muted">Unterstützte Formate: Alle Dateien bis 100MB</p>
+                    <input type="file" id="file-input" multiple style="display: none;">
+                    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                        Dateien auswählen
+                    </button>
+                </div>
+                <div id="upload-progress" style="display: none;">
+                    <div class="progress mb-3">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="upload-status">Upload wird vorbereitet...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" onclick="startUpload()" id="upload-btn" disabled>
+                    Hochladen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Löschen bestätigen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sind Sie sicher, dass Sie diese Datei/Verzeichnis löschen möchten?</p>
+                <p><strong id="delete-target"></strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()">Löschen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Container -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    <div id="alert-container"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global variables
+let currentPath = '{{ current_path }}';
+let selectedFiles = [];
+let filesToUpload = [];
+let currentEditingFile = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadDirectory(currentPath);
+    setupUploadArea();
+});
+
+// Load directory contents
+function loadDirectory(path) {
+    currentPath = path;
+    
+    // Update UI
+    document.getElementById('current-path-display').textContent = path;
+    updateBreadcrumb(path);
+    
+    // Show loading
+    document.getElementById('file-list').innerHTML = `
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            Lade Verzeichnis...
+        </div>
+    `;
+    
+    // Fetch directory contents
+    fetch(`/monitoring/api/server/directory/?path=${encodeURIComponent(path)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayFiles(data.items);
+                updateStats(data.total_items);
+            } else {
+                showError('Fehler beim Laden des Verzeichnisses: ' + data.error);
+            }
+        })
+        .catch(error => {
+            showError('Verbindungsfehler: ' + error.message);
+        });
+}
+
+// Display files in the file list
+function displayFiles(files) {
+    const fileList = document.getElementById('file-list');
+    
+    if (files.length === 0) {
+        fileList.innerHTML = `
+            <div class="text-center p-4 text-muted">
+                <i class="fas fa-folder-open fa-3x mb-3"></i>
+                <p>Verzeichnis ist leer</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    files.forEach(file => {
+        const icon = file.type === 'directory' ? 'fas fa-folder' : getFileIcon(file.name);
+        const size = file.type === 'directory' ? '' : formatFileSize(file.size);
+        
+        html += `
+            <div class="file-item" onclick="selectFile('${file.path}', '${file.type}', this)">
+                <div class="file-icon">
+                    <i class="${icon}"></i>
+                </div>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-meta">
+                        ${file.modified} | ${file.permissions} | ${file.owner}:${file.group}
+                    </div>
+                </div>
+                <div class="file-size">${size}</div>
+                <div class="file-actions">
+                    <div class="btn-group btn-group-sm">
+                        ${file.type === 'directory' ? 
+                            `<button class="btn btn-primary" onclick="event.stopPropagation(); navigateToPath('${file.path}')">
+                                <i class="fas fa-folder-open"></i>
+                            </button>` :
+                            `<button class="btn btn-primary" onclick="event.stopPropagation(); editFile('${file.path}')">
+                                <i class="fas fa-edit"></i>
+                            </button>`
+                        }
+                        <button class="btn btn-danger" onclick="event.stopPropagation(); deleteFile('${file.path}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    fileList.innerHTML = html;
+}
+
+// Get appropriate icon for file type
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'js': 'fab fa-js-square',
+        'html': 'fab fa-html5',
+        'css': 'fab fa-css3',
+        'py': 'fab fa-python',
+        'php': 'fab fa-php',
+        'txt': 'fas fa-file-alt',
+        'md': 'fab fa-markdown',
+        'json': 'fas fa-file-code',
+        'xml': 'fas fa-file-code',
+        'sql': 'fas fa-database',
+        'log': 'fas fa-file-alt',
+        'conf': 'fas fa-cogs',
+        'ini': 'fas fa-cogs',
+        'env': 'fas fa-cogs',
+        'jpg': 'fas fa-image',
+        'jpeg': 'fas fa-image',
+        'png': 'fas fa-image',
+        'gif': 'fas fa-image',
+        'pdf': 'fas fa-file-pdf',
+        'doc': 'fas fa-file-word',
+        'docx': 'fas fa-file-word',
+        'xls': 'fas fa-file-excel',
+        'xlsx': 'fas fa-file-excel',
+        'zip': 'fas fa-file-archive',
+        'tar': 'fas fa-file-archive',
+        'gz': 'fas fa-file-archive'
+    };
+    return icons[ext] || 'fas fa-file';
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Update breadcrumb navigation
+function updateBreadcrumb(path) {
+    const breadcrumb = document.getElementById('breadcrumb-nav');
+    const parts = path.split('/').filter(part => part !== '');
+    
+    let html = `<li class="breadcrumb-item"><a href="#" onclick="navigateToPath('/')">/</a></li>`;
+    
+    let currentPath = '';
+    parts.forEach((part, index) => {
+        currentPath += '/' + part;
+        if (index === parts.length - 1) {
+            html += `<li class="breadcrumb-item active">${part}</li>`;
+        } else {
+            html += `<li class="breadcrumb-item"><a href="#" onclick="navigateToPath('${currentPath}')">${part}</a></li>`;
+        }
+    });
+    
+    breadcrumb.innerHTML = html;
+}
+
+// Update stats bar
+function updateStats(count) {
+    document.getElementById('stats-bar').textContent = `${count} Elemente`;
+}
+
+// Navigation functions
+function navigateToPath(path) {
+    loadDirectory(path);
+}
+
+function goUp() {
+    const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
+    loadDirectory(parentPath);
+}
+
+function goHome() {
+    loadDirectory('/var/www');
+}
+
+function refreshBrowser() {
+    loadDirectory(currentPath);
+}
+
+// File selection
+function selectFile(path, type, element) {
+    // Remove previous selection
+    document.querySelectorAll('.file-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    // Add selection to clicked item
+    element.classList.add('selected');
+    
+    if (type === 'directory') {
+        navigateToPath(path);
+    }
+}
+
+// File editing
+function editFile(path) {
+    currentEditingFile = path;
+    
+    // Show loading in editor
+    document.getElementById('editor-filename').textContent = path;
+    document.getElementById('file-content').value = 'Lade Datei...';
+    document.getElementById('editor-container').style.display = 'block';
+    
+    // Scroll to editor
+    document.getElementById('editor-container').scrollIntoView({ behavior: 'smooth' });
+    
+    // Fetch file content
+    fetch(`/monitoring/api/server/file/content/?path=${encodeURIComponent(path)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.is_text) {
+                    document.getElementById('file-content').value = data.content;
+                } else {
+                    document.getElementById('file-content').value = 'Binärdatei kann nicht bearbeitet werden.\n\n' + data.content;
+                    document.getElementById('file-content').readOnly = true;
+                }
+            } else {
+                showError('Fehler beim Laden der Datei: ' + data.error);
+                closeEditor();
+            }
+        })
+        .catch(error => {
+            showError('Verbindungsfehler: ' + error.message);
+            closeEditor();
+        });
+}
+
+// Save file
+function saveFile() {
+    if (!currentEditingFile) return;
+    
+    const content = document.getElementById('file-content').value;
+    
+    fetch('/monitoring/api/server/file/edit/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            path: currentEditingFile,
+            content: content
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Datei erfolgreich gespeichert');
+            if (data.backup_created) {
+                showInfo('Backup erstellt: ' + data.backup_path);
+            }
+        } else {
+            showError('Fehler beim Speichern: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showError('Verbindungsfehler: ' + error.message);
+    });
+}
+
+// Close editor
+function closeEditor() {
+    document.getElementById('editor-container').style.display = 'none';
+    document.getElementById('file-content').value = '';
+    document.getElementById('file-content').readOnly = false;
+    currentEditingFile = null;
+}
+
+// Delete file
+function deleteFile(path) {
+    document.getElementById('delete-target').textContent = path;
+    document.getElementById('deleteModal').querySelector('[onclick="confirmDelete()"]').setAttribute('data-path', path);
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+function confirmDelete() {
+    const path = document.querySelector('[onclick="confirmDelete()"]').getAttribute('data-path');
+    
+    fetch('/monitoring/api/server/file/delete/', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            path: path
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess(data.message);
+            loadDirectory(currentPath);
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        } else {
+            showError('Fehler beim Löschen: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showError('Verbindungsfehler: ' + error.message);
+    });
+}
+
+// Upload functions
+function showUploadModal() {
+    new bootstrap.Modal(document.getElementById('uploadModal')).show();
+}
+
+function setupUploadArea() {
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    
+    // Drag and drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = Array.from(e.dataTransfer.files);
+        handleSelectedFiles(files);
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        handleSelectedFiles(files);
+    });
+    
+    // Click to select
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+}
+
+function handleSelectedFiles(files) {
+    filesToUpload = files;
+    
+    if (files.length > 0) {
+        document.getElementById('upload-btn').disabled = false;
+        
+        // Show file list
+        let fileList = files.map(file => `${file.name} (${formatFileSize(file.size)})`).join(', ');
+        document.getElementById('upload-area').innerHTML = `
+            <i class="fas fa-check-circle fa-2x mb-3 text-success"></i>
+            <h5>${files.length} Datei(en) ausgewählt</h5>
+            <p class="text-muted">${fileList}</p>
+        `;
+    }
+}
+
+function startUpload() {
+    if (filesToUpload.length === 0) return;
+    
+    const progressContainer = document.getElementById('upload-progress');
+    const progressBar = progressContainer.querySelector('.progress-bar');
+    const statusDiv = document.getElementById('upload-status');
+    
+    progressContainer.style.display = 'block';
+    document.getElementById('upload-btn').disabled = true;
+    
+    let uploaded = 0;
+    const total = filesToUpload.length;
+    
+    function uploadNext() {
+        if (uploaded >= total) {
+            // All files uploaded
+            showSuccess(`${total} Datei(en) erfolgreich hochgeladen`);
+            bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+            loadDirectory(currentPath);
+            return;
+        }
+        
+        const file = filesToUpload[uploaded];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('path', currentPath);
+        
+        statusDiv.textContent = `Lade ${file.name} hoch...`;
+        
+        fetch('/monitoring/api/server/file/upload/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                uploaded++;
+                const progress = (uploaded / total) * 100;
+                progressBar.style.width = progress + '%';
+                
+                if (uploaded < total) {
+                    uploadNext();
+                } else {
+                    statusDiv.textContent = 'Upload abgeschlossen!';
+                    setTimeout(() => {
+                        showSuccess(`${total} Datei(en) erfolgreich hochgeladen`);
+                        bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+                        loadDirectory(currentPath);
+                    }, 1000);
+                }
+            } else {
+                showError(`Fehler beim Upload von ${file.name}: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            showError(`Verbindungsfehler beim Upload von ${file.name}: ${error.message}`);
+        });
+    }
+    
+    uploadNext();
+}
+
+// Create new file
+function createNewFile() {
+    const filename = prompt('Dateiname eingeben:');
+    if (filename) {
+        const fullPath = currentPath + '/' + filename;
+        currentEditingFile = fullPath;
+        
+        document.getElementById('editor-filename').textContent = fullPath;
+        document.getElementById('file-content').value = '';
+        document.getElementById('editor-container').style.display = 'block';
+        
+        // Scroll to editor
+        document.getElementById('editor-container').scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// Alert functions
+function showAlert(message, type = 'info') {
+    const alertContainer = document.getElementById('alert-container');
+    const alertId = 'alert-' + Date.now();
+    
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" id="${alertId}" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        const alert = document.getElementById(alertId);
+        if (alert) {
+            bootstrap.Alert.getOrCreateInstance(alert).close();
+        }
+    }, 5000);
+}
+
+function showSuccess(message) {
+    showAlert(message, 'success');
+}
+
+function showError(message) {
+    showAlert(message, 'danger');
+}
+
+function showInfo(message) {
+    showAlert(message, 'info');
+}
+</script>
+{% endblock %}

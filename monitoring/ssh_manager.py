@@ -497,3 +497,36 @@ class SSHConnectionPool:
 
 # Global connection pool instance
 ssh_pool = SSHConnectionPool()
+
+
+class SSHManager:
+    """
+    Simplified SSH Manager for API usage
+    """
+    
+    def __init__(self):
+        self.settings = MonitoringSettings.get_settings()
+        
+    @contextmanager
+    def get_connection(self):
+        """Context manager for SSH connections"""
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        try:
+            # Connect to server
+            ssh_client.connect(
+                hostname=self.settings.ssh_host,
+                port=self.settings.ssh_port,
+                username=self.settings.ssh_user,
+                key_filename=os.path.expanduser(self.settings.ssh_key_path),
+                timeout=30
+            )
+            
+            yield ssh_client
+            
+        except Exception as e:
+            logger.error(f"SSH connection error: {e}")
+            raise SSHConnectionError(f"Could not connect to server: {e}")
+        finally:
+            ssh_client.close()

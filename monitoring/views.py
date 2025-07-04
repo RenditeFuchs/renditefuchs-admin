@@ -750,6 +750,16 @@ def server_status_view(request):
     return render(request, 'monitoring/server_status.html', context)
 
 
+@login_required
+def server_files_view(request):
+    """Server file browser view"""
+    context = {
+        'title': 'Server Dateien',
+        'current_path': '/var/www'
+    }
+    return render(request, 'monitoring/server_files.html', context)
+
+
 def error_detail_api(request, error_id):
     """API endpoint for error details"""
     try:

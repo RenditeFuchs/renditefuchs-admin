@@ -1,5 +1,9 @@
 from django.urls import path
 from . import views
+from .server_api import (
+    directory_list_api, file_content_api, file_edit_api, 
+    file_delete_api, file_upload_api
+)
 
 app_name = 'monitoring'
 
@@ -35,7 +39,17 @@ urlpatterns = [
     # Server Status
     path('server/', views.server_status_view, name='server_status'),
     
+    # Server Files
+    path('server-files/', views.server_files_view, name='server_files'),
+    
     # API Endpoints
     path('api/error/<int:error_id>/', views.error_detail_api, name='error_detail_api'),
     path('api/error/<int:error_id>/resolve/', views.error_resolve_api, name='error_resolve_api'),
+    
+    # Server File Management API
+    path('api/server/directory/', directory_list_api, name='directory_list_api'),
+    path('api/server/file/content/', file_content_api, name='file_content_api'),
+    path('api/server/file/edit/', file_edit_api, name='file_edit_api'),
+    path('api/server/file/delete/', file_delete_api, name='file_delete_api'),
+    path('api/server/file/upload/', file_upload_api, name='file_upload_api'),
 ]

@@ -1,465 +1,464 @@
 """
-Security module for server directory access
-Provides path validation, security checks, and access control
+Security module for server file operations
+Includes path validation, rate limiting, and security logging
 """
-
 import os
 import re
+import time
 import logging
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
-from django.core.exceptions import ValidationError
+from typing import Dict, List, Set
+from django.core.cache import cache
 from django.utils import timezone
 from django.contrib.auth.models import User
-from .models import ServerPath, SecurityLog, FileOperation, MonitoringSettings
+from .models import SecurityLog, FileOperation
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('monitoring')
 
 
 class SecurityException(Exception):
-    """Custom exception for security violations"""
+    """Custom security exception"""
     pass
 
 
-class ServerPathValidator:
+class PathValidator:
     """
-    Validates server paths and enforces security policies
+    Validates file paths for security
     """
     
-    # Dangerous path patterns to block
-    DANGEROUS_PATTERNS = [
-        r'\.\./',  # Path traversal
-        r'\.\.\\',  # Windows path traversal
-        r'/etc/',  # System config
-        r'/var/log/',  # System logs
-        r'/root/',  # Root directory
-        r'/home/(?!ubuntu)',  # Other user homes
-        r'/bin/',  # System binaries
-        r'/sbin/',  # System binaries
-        r'/usr/bin/',  # User binaries
-        r'/usr/sbin/',  # User binaries
-        r'/proc/',  # Process filesystem
-        r'/sys/',  # System filesystem
-        r'/dev/',  # Device files
-        r'/tmp/',  # Temporary files
-        r'\.ssh/',  # SSH keys
-        r'\.git/',  # Git repositories (sensitive)
-        r'\.env',  # Environment files
-        r'\.key',  # Key files
-        r'\.pem',  # Certificate files
-        r'\.crt',  # Certificate files
-        r'password',  # Password files
-        r'secret',  # Secret files
-        r'private',  # Private files
-    ]
-    
-    # Allowed base paths for server access
-    ALLOWED_BASE_PATHS = [
-        '/var/www/',
-        '/home/ubuntu/',
-    ]
-    
-    # Dangerous file extensions
-    DANGEROUS_EXTENSIONS = [
-        '.sh', '.bash', '.zsh', '.fish',  # Shell scripts
-        '.py', '.php', '.js', '.rb',  # Scripts (unless explicitly allowed)
-        '.exe', '.bin', '.so', '.dll',  # Binaries
-        '.key', '.pem', '.crt', '.p12',  # Certificates
-        '.sql', '.dump', '.backup',  # Database files
-        '.passwd', '.shadow', '.htpasswd',  # Password files
-    ]
-    
-    # Safe file extensions for viewing/editing
-    SAFE_EXTENSIONS = [
-        '.txt', '.md', '.html', '.css', '.scss',
-        '.json', '.xml', '.yaml', '.yml',
-        '.conf', '.config', '.ini', '.properties',
-        '.log', '.csv', '.tsv',
-    ]
-    
-    def __init__(self, user: User, ip_address: str = None, user_agent: str = None):
-        self.user = user
-        self.ip_address = ip_address
-        self.user_agent = user_agent
-        self.settings = MonitoringSettings.get_settings()
+    def __init__(self):
+        # Dangerous patterns to block
+        self.dangerous_patterns = [
+            r'\.\./',           # Path traversal
+            r'\/\.\./',         # Path traversal  
+            r'\.\.\\',          # Windows path traversal
+            r'\/etc\/passwd',   # System files
+            r'\/etc\/shadow',   # System files
+            r'\/proc\/',        # System files
+            r'\/sys\/',         # System files
+            r'\/dev\/',         # Device files
+            r'\/root\/',        # Root home
+            r'\/home\/[^\/]+\/\.[^\/]+', # Hidden files in home
+            r'\/tmp\/.*\.sh',   # Temp scripts
+            r'\/var\/log\/.*\.log', # Log files (read-only)
+        ]
         
-    def validate_path(self, path: str, operation: str = 'read') -> Tuple[bool, str]:
+        # Allowed base paths
+        self.allowed_paths = [
+            '/var/www/',
+            '/opt/projects/',
+            '/home/ubuntu/projects/',
+        ]
+        
+        # Dangerous file extensions
+        self.dangerous_extensions = {
+            '.exe', '.bat', '.cmd', '.com', '.scr', '.vbs', '.js', '.jar',
+            '.sh', '.bash', '.zsh', '.fish', '.csh', '.tcsh',
+            '.ps1', '.psm1', '.psd1'
+        }
+        
+        # Editable file extensions
+        self.editable_extensions = {
+            '.txt', '.md', '.html', '.htm', '.css', '.js', '.json', '.xml',
+            '.py', '.php', '.rb', '.go', '.java', '.cpp', '.c', '.h',
+            '.sql', '.conf', '.ini', '.cfg', '.env', '.yml', '.yaml',
+            '.log', '.csv', '.tsv', '.properties', '.dockerfile'
+        }
+    
+    def is_safe_path(self, path: str) -> bool:
         """
-        Validate a server path for security
+        Check if path is safe for access
         
         Args:
-            path: The path to validate
-            operation: The operation type (read, write, delete, etc.)
+            path: File path to validate
             
         Returns:
-            Tuple of (is_valid, error_message)
+            True if path is safe
         """
         try:
             # Normalize path
-            normalized_path = self._normalize_path(path)
+            normalized_path = os.path.normpath(path)
             
             # Check for dangerous patterns
-            if self._contains_dangerous_pattern(normalized_path):
-                self._log_security_event(
-                    'path_traversal',
-                    f"Dangerous path pattern detected: {path}",
-                    'critical'
-                )
-                return False, "Pfad enthält verdächtige Muster"
+            for pattern in self.dangerous_patterns:
+                if re.search(pattern, normalized_path, re.IGNORECASE):
+                    logger.warning(f"Dangerous path pattern detected: {path}")
+                    return False
             
-            # Check if path is in allowed base paths
-            if not self._is_in_allowed_base_path(normalized_path):
-                self._log_security_event(
-                    'unauthorized_access',
-                    f"Access to restricted path: {path}",
-                    'warning'
-                )
-                return False, "Zugriff auf diesen Pfad ist nicht erlaubt"
+            # Check if path starts with allowed base path
+            for allowed_path in self.allowed_paths:
+                if normalized_path.startswith(allowed_path):
+                    return True
             
-            # Check configured server paths
-            server_path = self._get_server_path_config(normalized_path)
-            if server_path:
-                if not server_path.allows_operation(operation):
-                    self._log_security_event(
-                        'permission_denied',
-                        f"Operation {operation} not allowed on {path}",
-                        'warning'
-                    )
-                    return False, f"Operation '{operation}' ist für diesen Pfad nicht erlaubt"
-                
-                if server_path.require_admin and not self.user.is_superuser:
-                    self._log_security_event(
-                        'unauthorized_access',
-                        f"Admin required for {path}",
-                        'warning'
-                    )
-                    return False, "Administrator-Berechtigung erforderlich"
-            
-            # Check file extension if it's a file
-            if os.path.isfile(normalized_path) or '.' in os.path.basename(normalized_path):
-                filename = os.path.basename(normalized_path)
-                if not self._is_file_safe(filename, operation):
-                    self._log_security_event(
-                        'malicious_file',
-                        f"Dangerous file access attempt: {filename}",
-                        'error'
-                    )
-                    return False, "Dateityp ist nicht erlaubt"
-            
-            # Path is valid
-            return True, ""
+            # Log unauthorized path access attempt
+            logger.warning(f"Unauthorized path access attempted: {path}")
+            return False
             
         except Exception as e:
-            logger.error(f"Error validating path {path}: {str(e)}")
-            self._log_security_event(
-                'system_alert',
-                f"Path validation error: {str(e)}",
-                'error'
-            )
-            return False, "Fehler bei der Pfad-Validierung"
+            logger.error(f"Error validating path {path}: {e}")
+            return False
     
-    def calculate_risk_score(self, path: str, operation: str) -> int:
+    def is_editable_file(self, file_path: str) -> bool:
         """
-        Calculate risk score for a path operation (0-100)
+        Check if file is editable
         
         Args:
-            path: The path being accessed
-            operation: The operation type
+            file_path: File path to check
             
         Returns:
-            Risk score (0-100)
+            True if file can be edited
         """
-        score = 0
-        
-        # Base score by operation type
-        operation_scores = {
-            'read': 10,
-            'list': 5,
-            'write': 30,
-            'delete': 50,
-            'execute': 70,
-            'upload': 40,
-            'download': 20,
-        }
-        score += operation_scores.get(operation, 20)
-        
-        # Path-based risk
-        if any(pattern in path.lower() for pattern in ['config', 'settings', 'database']):
-            score += 20
-        
-        if any(pattern in path.lower() for pattern in ['production', 'live', 'prod']):
-            score += 15
-        
-        # File extension risk
-        if '.' in os.path.basename(path):
-            ext = os.path.splitext(path)[1].lower()
-            if ext in self.DANGEROUS_EXTENSIONS:
-                score += 25
-            elif ext not in self.SAFE_EXTENSIONS:
-                score += 10
-        
-        # User-based risk
-        if not self.user.is_superuser:
-            score += 10
-        
-        return min(score, 100)
-    
-    def _normalize_path(self, path: str) -> str:
-        """Normalize and resolve path"""
-        # Remove dangerous characters
-        path = re.sub(r'[<>"|*?]', '', path)
-        
-        # Resolve relative paths
-        path = os.path.abspath(path)
-        
-        # Normalize path separators
-        path = os.path.normpath(path)
-        
-        return path
-    
-    def _contains_dangerous_pattern(self, path: str) -> bool:
-        """Check if path contains dangerous patterns"""
-        for pattern in self.DANGEROUS_PATTERNS:
-            if re.search(pattern, path, re.IGNORECASE):
-                return True
-        return False
-    
-    def _is_in_allowed_base_path(self, path: str) -> bool:
-        """Check if path is within allowed base paths"""
-        for base_path in self.ALLOWED_BASE_PATHS:
-            if path.startswith(base_path):
-                return True
-        return False
-    
-    def _get_server_path_config(self, path: str) -> Optional[ServerPath]:
-        """Get server path configuration for a given path"""
         try:
-            # Find the most specific matching path
-            matching_paths = []
-            for server_path in ServerPath.objects.filter(is_active=True):
-                if path.startswith(server_path.path):
-                    matching_paths.append(server_path)
+            # Get file extension
+            _, ext = os.path.splitext(file_path.lower())
             
-            if matching_paths:
-                # Return the most specific path (longest match)
-                return max(matching_paths, key=lambda p: len(p.path))
+            # Check if extension is editable
+            if ext in self.editable_extensions:
+                return True
+            
+            # Check if it's a config file without extension
+            filename = os.path.basename(file_path).lower()
+            config_files = {
+                'makefile', 'dockerfile', 'requirements.txt', 'package.json',
+                'composer.json', 'gemfile', 'rakefile', 'gulpfile',
+                'gruntfile', 'webpack.config', 'tsconfig.json'
+            }
+            
+            for config_file in config_files:
+                if config_file in filename:
+                    return True
+            
+            return False
             
         except Exception as e:
-            logger.error(f"Error getting server path config: {str(e)}")
-        
-        return None
+            logger.error(f"Error checking if file is editable {file_path}: {e}")
+            return False
     
-    def _is_file_safe(self, filename: str, operation: str) -> bool:
-        """Check if file is safe for the given operation"""
-        if not filename or '.' not in filename:
+    def is_deletable_path(self, path: str) -> bool:
+        """
+        Check if path can be deleted
+        
+        Args:
+            path: Path to check
+            
+        Returns:
+            True if path can be deleted
+        """
+        try:
+            # Must be safe path first
+            if not self.is_safe_path(path):
+                return False
+            
+            # Protected paths that cannot be deleted
+            protected_paths = [
+                '/var/www/live/',
+                '/var/www/test/',
+                '/var/www/shared/',
+                '/var/www/html/',
+                '/var/www/logs/',
+            ]
+            
+            # Check if path is protected
+            for protected_path in protected_paths:
+                if path.startswith(protected_path) and len(path.split('/')) <= len(protected_path.split('/')):
+                    return False
+            
+            # Check file extension
+            _, ext = os.path.splitext(path.lower())
+            if ext in self.dangerous_extensions:
+                return False
+            
             return True
             
-        ext = os.path.splitext(filename)[1].lower()
-        
-        # Check server path configuration first
-        server_path = self._get_server_path_config(filename)
-        if server_path:
-            return server_path.is_file_allowed(filename)
-        
-        # Default safety checks
-        if ext in self.DANGEROUS_EXTENSIONS:
-            # Only allow for admin users with explicit permission
-            if operation in ['read', 'list'] and self.user.is_superuser:
-                return True
-            return False
-        
-        return True
-    
-    def _log_security_event(self, event_type: str, message: str, severity: str = 'info'):
-        """Log security event"""
-        try:
-            SecurityLog.objects.create(
-                event_type=event_type,
-                severity=severity,
-                message=message,
-                user_id=str(self.user.id),
-                username=self.user.username,
-                ip_address=self.ip_address,
-                user_agent=self.user_agent
-            )
         except Exception as e:
-            logger.error(f"Error logging security event: {str(e)}")
-
-
-class FileOperationTracker:
-    """
-    Tracks file operations for audit trail
-    """
+            logger.error(f"Error checking if path is deletable {path}: {e}")
+            return False
     
-    def __init__(self, user: User, ip_address: str = None, user_agent: str = None, session_id: str = None):
-        self.user = user
-        self.ip_address = ip_address
-        self.user_agent = user_agent
-        self.session_id = session_id
-        self.validator = ServerPathValidator(user, ip_address, user_agent)
-    
-    def track_operation(self, operation: str, file_path: str, status: str = 'success', 
-                       original_path: str = None, file_size: int = None, 
-                       error_message: str = None, execution_time: float = None,
-                       metadata: Dict = None) -> FileOperation:
+    def validate_filename(self, filename: str) -> bool:
         """
-        Track a file operation in the audit trail
+        Validate filename for security
         
         Args:
-            operation: Type of operation (read, write, delete, etc.)
-            file_path: Path of the file
-            status: Operation status (success, failed, blocked, unauthorized)
-            original_path: Original path for rename/move operations
-            file_size: Size of the file in bytes
-            error_message: Error message if operation failed
-            execution_time: Time taken for operation in milliseconds
-            metadata: Additional metadata
+            filename: Filename to validate
             
         Returns:
-            Created FileOperation instance
+            True if filename is safe
         """
         try:
-            # Calculate risk score
-            risk_score = self.validator.calculate_risk_score(file_path, operation)
+            # Check for dangerous characters
+            dangerous_chars = ['<', '>', ':', '"', '|', '?', '*', '\x00']
+            for char in dangerous_chars:
+                if char in filename:
+                    return False
             
-            # Determine security level
-            security_level = 'low'
-            if risk_score >= 70:
-                security_level = 'high'
-            elif risk_score >= 40:
-                security_level = 'medium'
+            # Check for reserved names (Windows)
+            reserved_names = [
+                'con', 'prn', 'aux', 'nul', 'com1', 'com2', 'com3', 'com4',
+                'com5', 'com6', 'com7', 'com8', 'com9', 'lpt1', 'lpt2',
+                'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9'
+            ]
             
-            # Get file type
-            file_type = self._get_file_type(file_path)
+            if filename.lower() in reserved_names:
+                return False
             
-            # Create file operation record
-            file_operation = FileOperation.objects.create(
-                operation=operation,
-                status=status,
-                file_path=file_path,
-                original_path=original_path or '',
-                file_size=file_size,
-                file_type=file_type,
-                user_id=str(self.user.id),
-                username=self.user.username,
-                session_id=self.session_id or '',
-                ip_address=self.ip_address,
-                user_agent=self.user_agent or '',
-                security_level=security_level,
-                risk_score=risk_score,
-                metadata=metadata or {},
-                error_message=error_message or '',
-                execution_time=execution_time
-            )
+            # Check filename length
+            if len(filename) > 255:
+                return False
             
-            # Log security event if high risk
-            if risk_score >= 70:
-                SecurityLog.objects.create(
-                    event_type='suspicious_activity',
-                    severity='warning',
-                    message=f"High-risk file operation: {operation} on {file_path}",
-                    user_id=str(self.user.id),
-                    username=self.user.username,
-                    ip_address=self.ip_address,
-                    user_agent=self.user_agent,
-                    file_path=file_path,
-                    related_file_operation=file_operation
-                )
+            # Check for hidden files starting with dot
+            if filename.startswith('.') and len(filename) > 1:
+                return False
             
-            return file_operation
+            return True
             
         except Exception as e:
-            logger.error(f"Error tracking file operation: {str(e)}")
-            raise
-    
-    def _get_file_type(self, file_path: str) -> str:
-        """Get file type based on extension"""
-        if not file_path or '.' not in os.path.basename(file_path):
-            return 'unknown'
-        
-        ext = os.path.splitext(file_path)[1].lower()
-        
-        type_map = {
-            '.txt': 'text',
-            '.md': 'markdown',
-            '.html': 'html',
-            '.css': 'css',
-            '.scss': 'scss',
-            '.js': 'javascript',
-            '.py': 'python',
-            '.php': 'php',
-            '.json': 'json',
-            '.xml': 'xml',
-            '.yaml': 'yaml',
-            '.yml': 'yaml',
-            '.conf': 'config',
-            '.config': 'config',
-            '.ini': 'config',
-            '.log': 'log',
-            '.csv': 'csv',
-            '.sql': 'sql',
-            '.sh': 'shell',
-            '.bash': 'shell',
-        }
-        
-        return type_map.get(ext, 'unknown')
+            logger.error(f"Error validating filename {filename}: {e}")
+            return False
 
 
 class RateLimiter:
     """
-    Rate limiting for file operations
+    Rate limiter for API requests
     """
     
-    def __init__(self, user: User):
-        self.user = user
-        self.settings = MonitoringSettings.get_settings()
+    def __init__(self):
+        self.limits = {
+            'file_operations': {
+                'requests': 50,
+                'window': 300,  # 5 minutes
+            },
+            'directory_listing': {
+                'requests': 100,
+                'window': 300,
+            },
+            'file_editing': {
+                'requests': 20,
+                'window': 300,
+            }
+        }
     
-    def is_rate_limited(self, operation: str = None) -> Tuple[bool, str]:
+    def allow_request(self, user: User, endpoint: str) -> bool:
         """
-        Check if user is rate limited
+        Check if request is allowed under rate limit
         
         Args:
-            operation: Optional operation type for specific limits
+            user: User making request
+            endpoint: API endpoint
             
         Returns:
-            Tuple of (is_limited, message)
+            True if request is allowed
         """
         try:
-            # Check hourly limit
-            one_hour_ago = timezone.now() - timezone.timedelta(hours=1)
-            recent_operations = FileOperation.objects.filter(
-                user_id=str(self.user.id),
-                created_at__gte=one_hour_ago
-            ).count()
+            # Determine rate limit type
+            limit_type = self._get_limit_type(endpoint)
+            if not limit_type:
+                return True
             
-            if recent_operations >= self.settings.max_file_operations_per_hour:
-                return True, f"Rate limit exceeded: {recent_operations} operations in the last hour"
+            # Get limit configuration
+            limit_config = self.limits.get(limit_type, self.limits['file_operations'])
             
-            # Check for suspicious patterns (many failed operations)
-            failed_operations = FileOperation.objects.filter(
-                user_id=str(self.user.id),
-                created_at__gte=one_hour_ago,
-                status__in=['failed', 'blocked', 'unauthorized']
-            ).count()
+            # Create cache key
+            cache_key = f"rate_limit_{user.id}_{limit_type}"
             
-            if failed_operations >= 10:  # More than 10 failed operations in an hour
-                return True, "Too many failed operations detected"
+            # Get current request count
+            current_requests = cache.get(cache_key, 0)
             
-            return False, ""
+            # Check if limit exceeded
+            if current_requests >= limit_config['requests']:
+                logger.warning(f"Rate limit exceeded for user {user.username} on {endpoint}")
+                return False
+            
+            # Increment counter
+            cache.set(cache_key, current_requests + 1, limit_config['window'])
+            
+            return True
             
         except Exception as e:
-            logger.error(f"Error checking rate limit: {str(e)}")
-            return False, ""
+            logger.error(f"Error checking rate limit: {e}")
+            return True  # Allow request if rate limiter fails
     
-    def record_rate_limit_violation(self, reason: str):
-        """Record a rate limit violation"""
+    def _get_limit_type(self, endpoint: str) -> str:
+        """Get rate limit type for endpoint"""
+        if 'directory' in endpoint:
+            return 'directory_listing'
+        elif 'edit' in endpoint:
+            return 'file_editing'
+        else:
+            return 'file_operations'
+
+
+class SecurityAuditor:
+    """
+    Security auditing and logging
+    """
+    
+    def __init__(self):
+        self.suspicious_patterns = [
+            r'rm\s+-rf',
+            r'sudo\s+',
+            r'passwd\s+',
+            r'chmod\s+777',
+            r'curl\s+.*\|\s*sh',
+            r'wget\s+.*\|\s*sh',
+            r'nc\s+.*\s+-e',
+            r'telnet\s+',
+            r'ftp\s+',
+        ]
+    
+    def audit_file_access(self, user: User, operation: str, file_path: str, 
+                         success: bool, ip_address: str = None, 
+                         user_agent: str = None, content: str = None):
+        """
+        Audit file access operation
+        
+        Args:
+            user: User performing operation
+            operation: Type of operation
+            file_path: Path being accessed
+            success: Whether operation was successful
+            ip_address: User's IP address
+            user_agent: User's user agent
+            content: File content (for edit operations)
+        """
         try:
-            SecurityLog.objects.create(
-                event_type='rate_limit_exceeded',
-                severity='warning',
-                message=f"Rate limit exceeded: {reason}",
-                user_id=str(self.user.id),
-                username=self.user.username
+            # Check for suspicious content
+            security_score = self._calculate_security_score(file_path, content)
+            
+            # Log operation
+            FileOperation.objects.create(
+                user_id=str(user.id),
+                username=user.username,
+                operation=operation,
+                status='success' if success else 'failed',
+                file_path=file_path,
+                ip_address=ip_address or '',
+                user_agent=user_agent or '',
+                risk_score=security_score
             )
+            
+            # Log security event if suspicious
+            if security_score > 50:
+                SecurityLog.objects.create(
+                    event_type='suspicious_activity',
+                    severity='warning',
+                    message=f"Suspicious file operation: {operation} on {file_path}",
+                    user_id=str(user.id),
+                    username=user.username,
+                    ip_address=ip_address or '',
+                    metadata={
+                        'operation': operation,
+                        'file_path': file_path,
+                        'security_score': security_score
+                    }
+                )
+            
         except Exception as e:
-            logger.error(f"Error recording rate limit violation: {str(e)}")
+            logger.error(f"Error auditing file access: {e}")
+    
+    def _calculate_security_score(self, file_path: str, content: str = None) -> int:
+        """
+        Calculate security risk score (0-100)
+        
+        Args:
+            file_path: File path
+            content: File content
+            
+        Returns:
+            Security score (higher = more suspicious)
+        """
+        score = 0
+        
+        try:
+            # Check file path
+            if '/etc/' in file_path:
+                score += 30
+            if '/root/' in file_path:
+                score += 40
+            if '/home/' in file_path and '/.ssh/' in file_path:
+                score += 50
+            
+            # Check file extension
+            _, ext = os.path.splitext(file_path.lower())
+            if ext in ['.sh', '.bash', '.bat', '.cmd', '.exe']:
+                score += 20
+            
+            # Check content if provided
+            if content:
+                for pattern in self.suspicious_patterns:
+                    if re.search(pattern, content, re.IGNORECASE):
+                        score += 25
+                
+                # Check for encoded content
+                if 'base64' in content.lower() or 'eval(' in content:
+                    score += 15
+            
+            return min(score, 100)  # Cap at 100
+            
+        except Exception as e:
+            logger.error(f"Error calculating security score: {e}")
+            return 0
+    
+    def check_user_activity(self, user: User, hours: int = 24) -> Dict:
+        """
+        Check user activity for suspicious patterns
+        
+        Args:
+            user: User to check
+            hours: Hours to look back
+            
+        Returns:
+            Activity summary
+        """
+        try:
+            since = timezone.now() - timezone.timedelta(hours=hours)
+            
+            # Get recent operations
+            operations = FileOperation.objects.filter(
+                user=user,
+                created_at__gte=since
+            )
+            
+            # Get recent security events
+            security_events = SecurityLog.objects.filter(
+                user_id=str(user.id),
+                created_at__gte=since
+            )
+            
+            # Calculate statistics
+            total_operations = operations.count()
+            failed_operations = operations.filter(status='failed').count()
+            high_risk_operations = operations.filter(risk_score__gte=50).count()
+            
+            return {
+                'total_operations': total_operations,
+                'failed_operations': failed_operations,
+                'high_risk_operations': high_risk_operations,
+                'security_events': security_events.count(),
+                'risk_level': self._calculate_risk_level(
+                    total_operations, failed_operations, high_risk_operations
+                )
+            }
+            
+        except Exception as e:
+            logger.error(f"Error checking user activity: {e}")
+            return {}
+    
+    def _calculate_risk_level(self, total: int, failed: int, high_risk: int) -> str:
+        """Calculate overall risk level"""
+        if total == 0:
+            return 'low'
+        
+        failure_rate = failed / total
+        risk_rate = high_risk / total
+        
+        if failure_rate > 0.3 or risk_rate > 0.2:
+            return 'high'
+        elif failure_rate > 0.1 or risk_rate > 0.1:
+            return 'medium'
+        else:
+            return 'low'
+
+
+# Global instances
+path_validator = PathValidator()
+rate_limiter = RateLimiter()
+security_auditor = SecurityAuditor()
