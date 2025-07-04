@@ -44,6 +44,7 @@ class PathValidator:
         
         # Allowed base paths
         self.allowed_paths = [
+            '/var/www',
             '/var/www/',
             '/opt/projects/',
             '/home/ubuntu/projects/',

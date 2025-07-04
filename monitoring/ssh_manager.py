@@ -514,15 +514,27 @@ class SSHManager:
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
         try:
+            # Debug SSH settings
+            logger.info(f"Attempting SSH connection to {self.settings.ssh_host}:{self.settings.ssh_port}")
+            logger.info(f"SSH user: {self.settings.ssh_user}")
+            logger.info(f"SSH key path: {self.settings.ssh_key_path}")
+            
+            # Check if key file exists
+            key_path = os.path.expanduser(self.settings.ssh_key_path)
+            if not os.path.exists(key_path):
+                logger.error(f"SSH key file does not exist: {key_path}")
+                raise SSHConnectionError(f"SSH key file not found: {key_path}")
+            
             # Connect to server
             ssh_client.connect(
                 hostname=self.settings.ssh_host,
                 port=self.settings.ssh_port,
                 username=self.settings.ssh_user,
-                key_filename=os.path.expanduser(self.settings.ssh_key_path),
+                key_filename=key_path,
                 timeout=30
             )
             
+            logger.info("SSH connection established successfully")
             yield ssh_client
             
         except Exception as e:

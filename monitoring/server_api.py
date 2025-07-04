@@ -75,10 +75,20 @@ class DirectoryListAPI(ServerFileAPI):
         """List directory contents"""
         path = request.GET.get('path', '/var/www')
         
+        # Debug logging
+        logger.info(f"Directory listing requested for path: {path}")
+        
         # Validate path
         if not self.path_validator.is_safe_path(path):
+            logger.warning(f"Path validation failed for: {path}")
             self.log_operation(request.user, 'list_directory', path, success=False, error_msg='Invalid path')
-            return JsonResponse({'error': 'Invalid path'}, status=400)
+            return JsonResponse({
+                'error': 'Invalid path',
+                'debug': {
+                    'path': path,
+                    'allowed_paths': self.path_validator.allowed_paths
+                }
+            }, status=400)
         
         try:
             # Connect to server and list directory
@@ -139,7 +149,13 @@ class DirectoryListAPI(ServerFileAPI):
         except Exception as e:
             logger.error(f"Directory listing failed: {e}")
             self.log_operation(request.user, 'list_directory', path, success=False, error_msg=str(e))
-            return JsonResponse({'error': 'Server connection failed'}, status=500)
+            return JsonResponse({
+                'error': 'Server connection failed',
+                'debug': {
+                    'exception': str(e),
+                    'path': path
+                }
+            }, status=500)
 
 
 @method_decorator(login_required, name='dispatch')

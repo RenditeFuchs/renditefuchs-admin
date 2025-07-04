@@ -211,6 +211,9 @@
                     <button type="button" class="btn btn-warning" onclick="createNewFile()">
                         <i class="fas fa-plus"></i> Neue Datei
                     </button>
+                    <button type="button" class="btn btn-info" onclick="runDebugTests()">
+                        <i class="fas fa-bug"></i> Debug
+                    </button>
                 </div>
             </div>
             
@@ -811,6 +814,59 @@ function showError(message) {
 
 function showInfo(message) {
     showAlert(message, 'info');
+}
+
+// Debug functions
+function runDebugTests() {
+    showInfo('Führe Debug-Tests durch...');
+    
+    // Test 1: Configuration
+    fetch('/monitoring/debug/config/')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Debug Config:', data);
+            if (data.success) {
+                showSuccess('Konfiguration: OK');
+                
+                // Test 2: SSH Connection
+                return fetch('/monitoring/debug/ssh/');
+            } else {
+                showError('Konfigurationsfehler: ' + JSON.stringify(data));
+                throw new Error('Config failed');
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('SSH Test:', data);
+            if (data.success) {
+                showSuccess('SSH-Verbindung: OK');
+                
+                // Test 3: Directory listing
+                return fetch('/monitoring/debug/directory/?path=/var/www');
+            } else {
+                showError('SSH-Verbindungsfehler: ' + data.error);
+                throw new Error('SSH failed');
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Directory Test:', data);
+            if (data.success) {
+                showSuccess('Verzeichnis-Listing: OK (' + data.count + ' Elemente)');
+                showInfo('Alle Tests erfolgreich! Versuche normale Funktion...');
+                
+                // Try normal function
+                setTimeout(() => {
+                    loadDirectory('/var/www');
+                }, 1000);
+            } else {
+                showError('Verzeichnis-Listing-Fehler: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Debug test error:', error);
+            showError('Debug-Test fehlgeschlagen: ' + error.message);
+        });
 }
 </script>
 {% endblock %}
