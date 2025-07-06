@@ -1,6 +1,6 @@
 {% extends 'base/admin_base.html' %}
 
-{% block title %}Benutzerverwaltung - RenditeFuchs Admin{% endblock %}
+{% block title %}Benutzerverwaltung - RENDITEFUCHS Admin{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -74,6 +74,18 @@
         background: rgba(239, 68, 68, 0.15);
         color: #ef4444;
         border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    
+    .badge-beta {
+        background: rgba(249, 115, 22, 0.15);
+        color: #f97316;
+        border: 1px solid rgba(249, 115, 22, 0.2);
+    }
+    
+    .badge-user {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.2);
     }
     
     .badge-active {
@@ -209,6 +221,59 @@
         border-color: var(--rf-primary);
         color: white;
     }
+    
+    .bulk-actions {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        display: none;
+    }
+    
+    .bulk-actions.show {
+        display: block;
+    }
+    
+    .user-checkbox {
+        margin-right: 1rem;
+    }
+    
+    .group-badge-container {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: auto;
+    }
+    
+    .btn-group-action {
+        background: var(--rf-primary);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-group-action:hover {
+        background: rgba(255, 107, 53, 0.8);
+        transform: translateY(-1px);
+    }
+    
+    .analytics-link {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        text-decoration: none;
+    }
+    
+    .analytics-link:hover {
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+        text-decoration: none;
+    }
 </style>
 {% endblock %}
 
@@ -218,10 +283,13 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1>Benutzerverwaltung</h1>
-            <p class="text-muted">Übersicht und Verwaltung aller Systembenutzer</p>
+            <p class="text-muted">Übersicht und Verwaltung aller RENDITEFUCHS-Benutzer mit Gruppenverwaltung</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="/django-admin/auth/user/add/" target="_blank" class="btn btn-primary">
+            <a href="{% url 'monitoring:user_group_analytics' %}" class="btn analytics-link">
+                <i class="fas fa-chart-bar me-2"></i>Gruppenanalyse
+            </a>
+            <a href="/django-admin/core/customer/add/" target="_blank" class="btn btn-primary">
                 <i class="fas fa-plus me-2"></i>Neuer Benutzer
             </a>
             <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary">
@@ -233,140 +301,177 @@
     <!-- User Statistics -->
     <div class="stats-grid">
         <div class="stats-card">
-            <div class="stats-value">{{ user_stats.total_users }}</div>
+            <div class="stats-value">{{ user_stats.total_customers }}</div>
             <div class="stats-label">Benutzer gesamt</div>
         </div>
         <div class="stats-card">
-            <div class="stats-value">{{ user_stats.active_users }}</div>
+            <div class="stats-value">{{ user_stats.active_customers }}</div>
             <div class="stats-label">Aktive Benutzer</div>
         </div>
         <div class="stats-card">
-            <div class="stats-value">{{ user_stats.staff_users }}</div>
-            <div class="stats-label">Staff-Benutzer</div>
-        </div>
-        <div class="stats-card">
-            <div class="stats-value">{{ user_stats.superusers }}</div>
+            <div class="stats-value">{{ user_stats.super_admins }}</div>
             <div class="stats-label">Super-Admins</div>
         </div>
         <div class="stats-card">
-            <div class="stats-value">{{ user_stats.recent_logins }}</div>
-            <div class="stats-label">Aktiv (30 Tage)</div>
+            <div class="stats-value">{{ user_stats.beta_users }}</div>
+            <div class="stats-label">Beta-User</div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-value">{{ user_stats.regular_users }}</div>
+            <div class="stats-label">Standard-User</div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-value">{{ user_stats.recent_registrations }}</div>
+            <div class="stats-label">Neue (30 Tage)</div>
         </div>
     </div>
 
     <!-- Search and Filters -->
+    <!-- Bulk Actions (initially hidden) -->
+    <div class="bulk-actions" id="bulkActions">
+        <div class="d-flex align-items-center gap-3">
+            <span><strong><span id="selectedCount">0</span> Benutzer ausgewählt</strong></span>
+            <select class="filter-select" id="bulkGroupSelect">
+                <option value="">Gruppe zuweisen...</option>
+                {% for value, label in user_group_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn-group-action" onclick="applyBulkGroupUpdate()">
+                <i class="fas fa-users me-2"></i>Gruppen zuweisen
+            </button>
+            <button class="btn btn-outline-secondary" onclick="clearSelection()">
+                <i class="fas fa-times me-2"></i>Auswahl aufheben
+            </button>
+        </div>
+    </div>
+    
+    <!-- Search and Filters -->
     <div class="search-box">
         <i class="fas fa-search search-icon"></i>
         <input type="text" class="search-input" placeholder="Benutzer suchen..." 
-               onkeyup="filterUsers(this.value)">
+               value="{{ current_filters.search }}" onkeyup="updateFilters()" id="searchInput">
     </div>
     
     <div class="filters">
-        <select class="filter-select" onchange="filterByStatus(this.value)">
+        <select class="filter-select" onchange="updateFilters()" id="statusFilter">
             <option value="">Alle Status</option>
-            <option value="active">Aktiv</option>
-            <option value="inactive">Inaktiv</option>
+            <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>Aktiv</option>
+            <option value="inactive" {% if current_filters.status == 'inactive' %}selected{% endif %}>Inaktiv</option>
         </select>
-        <select class="filter-select" onchange="filterByRole(this.value)">
-            <option value="">Alle Rollen</option>
-            <option value="superuser">Super-Admin</option>
-            <option value="staff">Staff</option>
-            <option value="user">Benutzer</option>
+        <select class="filter-select" onchange="updateFilters()" id="groupFilter">
+            <option value="">Alle Gruppen</option>
+            {% for value, label in user_group_choices %}
+                <option value="{{ value }}" {% if current_filters.user_group == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
         </select>
         <button class="btn btn-outline-secondary" onclick="clearFilters()">
             <i class="fas fa-times me-2"></i>Filter zurücksetzen
         </button>
+        <label class="ms-3">
+            <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"> Alle auswählen
+        </label>
     </div>
 
     <!-- Users List -->
     <div class="users-container">
-        {% for user in page_obj %}
-        <div class="user-card" data-user-id="{{ user.id }}" 
-             data-username="{{ user.username|lower }}" 
-             data-email="{{ user.email|lower }}"
-             data-status="{% if user.is_active %}active{% else %}inactive{% endif %}"
-             data-role="{% if user.is_superuser %}superuser{% elif user.is_staff %}staff{% else %}user{% endif %}">
+        {% for customer in page_obj %}
+        <div class="user-card" data-customer-id="{{ customer.id }}" 
+             data-username="{{ customer.first_name|lower }} {{ customer.last_name|lower }}" 
+             data-email="{{ customer.email|lower }}"
+             data-status="{% if customer.is_active %}active{% else %}inactive{% endif %}"
+             data-group="{{ customer.user_group }}">
             
             <div class="user-header">
+                <input type="checkbox" class="user-checkbox" data-customer-id="{{ customer.id }}" onchange="updateSelection()">
                 <div class="user-avatar">
-                    {% if user.first_name %}
-                        {{ user.first_name.0 }}{{ user.last_name.0|default:'' }}
-                    {% else %}
-                        {{ user.username.0|upper }}
-                    {% endif %}
+                    {{ customer.get_user_initials }}
                 </div>
                 <div class="user-info flex-grow-1">
-                    <h5>
-                        {% if user.first_name or user.last_name %}
-                            {{ user.first_name }} {{ user.last_name }}
-                        {% else %}
-                            {{ user.username }}
-                        {% endif %}
-                    </h5>
-                    <p class="user-email">{{ user.email|default:"Keine E-Mail" }}</p>
+                    <h5>{{ customer.first_name }} {{ customer.last_name }}</h5>
+                    <p class="user-email">{{ customer.email }}</p>
                     
                     <div class="user-badges">
-                        {% if user.is_active %}
+                        {% if customer.is_active %}
                             <span class="user-badge badge-active">Aktiv</span>
                         {% else %}
                             <span class="user-badge badge-inactive">Inaktiv</span>
                         {% endif %}
                         
-                        {% if user.is_superuser %}
+                        {% if customer.user_group == 'super_admin' %}
                             <span class="user-badge badge-superuser">Super-Admin</span>
-                        {% elif user.is_staff %}
-                            <span class="user-badge badge-staff">Staff</span>
+                        {% elif customer.user_group == 'beta_user' %}
+                            <span class="user-badge badge-beta">Beta-User</span>
+                        {% else %}
+                            <span class="user-badge badge-user">User</span>
                         {% endif %}
                     </div>
                 </div>
                 
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
-                            data-bs-toggle="dropdown">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a class="dropdown-item" href="/django-admin/auth/user/{{ user.id }}/change/" target="_blank">
-                                <i class="fas fa-edit me-2"></i>Bearbeiten
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#" onclick="viewUserDetails({{ user.id }})">
-                                <i class="fas fa-eye me-2"></i>Details anzeigen
-                            </a>
-                        </li>
-                        {% if not user.is_superuser %}
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item text-danger" href="#" onclick="toggleUserStatus({{ user.id }}, {{ user.is_active|yesno:'false,true' }})">
-                                <i class="fas fa-{% if user.is_active %}ban{% else %}check{% endif %} me-2"></i>
-                                {% if user.is_active %}Deaktivieren{% else %}Aktivieren{% endif %}
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
+                <div class="group-badge-container">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="fas fa-users me-2"></i>Gruppe
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for value, label in user_group_choices %}
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="updateSingleUserGroup({{ customer.id }}, '{{ value }}')">
+                                    {% if customer.user_group == value %}<i class="fas fa-check me-2"></i>{% else %}<i class="fas fa-circle me-2" style="opacity: 0.3;"></i>{% endif %}
+                                    {{ label }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="/django-admin/core/customer/{{ customer.id }}/change/" target="_blank">
+                                    <i class="fas fa-edit me-2"></i>Bearbeiten
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="viewCustomerDetails({{ customer.id }})">
+                                    <i class="fas fa-eye me-2"></i>Details anzeigen
+                                </a>
+                            </li>
+                            {% if customer.user_group != 'super_admin' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="#" onclick="toggleCustomerStatus({{ customer.id }}, {{ customer.is_active|yesno:'false,true' }})">
+                                    <i class="fas fa-{% if customer.is_active %}ban{% else %}check{% endif %} me-2"></i>
+                                    {% if customer.is_active %}Deaktivieren{% else %}Aktivieren{% endif %}
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
                 </div>
             </div>
             
             <div class="user-details">
                 <div class="detail-item">
                     <div class="detail-label">Registriert</div>
-                    <div class="detail-value">{{ user.date_joined|date:"d.m.Y" }}</div>
+                    <div class="detail-value">{{ customer.created_at|date:"d.m.Y" }}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">Letzter Login</div>
-                    <div class="detail-value">
-                        {% if user.last_login %}
-                            {{ user.last_login|timesince }} her
-                        {% else %}
-                            Nie
-                        {% endif %}
-                    </div>
+                    <div class="detail-label">Benutzergruppe</div>
+                    <div class="detail-value">{{ customer.get_user_group_display_name }}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">Benutzername</div>
-                    <div class="detail-value">{{ user.username }}</div>
+                    <div class="detail-label">Typ</div>
+                    <div class="detail-value">{{ customer.get_customer_type_display }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Land</div>
+                    <div class="detail-value">{{ customer.country|default:"N/A" }}</div>
                 </div>
             </div>
         </div>
@@ -374,7 +479,7 @@
         <div class="text-center py-5">
             <i class="fas fa-users fa-3x text-muted mb-3"></i>
             <h3 class="text-muted">Keine Benutzer gefunden</h3>
-            <p class="text-muted">Versuchen Sie andere Suchkriterien oder erstellen Sie den ersten Benutzer.</p>
+            <p class="text-muted">Versuchen Sie andere Suchkriterien oder registrieren Sie den ersten Benutzer.</p>
         </div>
         {% endfor %}
     </div>
@@ -416,66 +521,190 @@
 
 {% block extra_js %}
 <script>
-function filterUsers(searchTerm) {
-    const users = document.querySelectorAll('.user-card');
-    const term = searchTerm.toLowerCase();
-    
-    users.forEach(user => {
-        const username = user.dataset.username;
-        const email = user.dataset.email;
-        
-        if (username.includes(term) || email.includes(term)) {
-            user.style.display = 'block';
-        } else {
-            user.style.display = 'none';
-        }
-    });
-}
+let selectedCustomers = new Set();
 
-function filterByStatus(status) {
-    const users = document.querySelectorAll('.user-card');
+function updateFilters() {
+    const search = document.getElementById('searchInput').value;
+    const status = document.getElementById('statusFilter').value;
+    const group = document.getElementById('groupFilter').value;
     
-    users.forEach(user => {
-        if (!status || user.dataset.status === status) {
-            user.style.display = 'block';
-        } else {
-            user.style.display = 'none';
-        }
-    });
-}
-
-function filterByRole(role) {
-    const users = document.querySelectorAll('.user-card');
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (status) params.set('status', status);
+    if (group) params.set('user_group', group);
     
-    users.forEach(user => {
-        if (!role || user.dataset.role === role) {
-            user.style.display = 'block';
-        } else {
-            user.style.display = 'none';
-        }
-    });
+    window.location.href = '?' + params.toString();
 }
 
 function clearFilters() {
-    document.querySelector('.search-input').value = '';
-    document.querySelectorAll('.filter-select').forEach(select => {
-        select.value = '';
-    });
-    document.querySelectorAll('.user-card').forEach(user => {
-        user.style.display = 'block';
-    });
+    window.location.href = window.location.pathname;
 }
 
-function viewUserDetails(userId) {
-    window.open(`/django-admin/auth/user/${userId}/change/`, '_blank');
+function updateSelection() {
+    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+    selectedCustomers.clear();
+    
+    checkboxes.forEach(cb => {
+        selectedCustomers.add(parseInt(cb.dataset.customerId));
+    });
+    
+    updateBulkActionsVisibility();
 }
 
-function toggleUserStatus(userId, newStatus) {
-    const action = newStatus ? 'aktivieren' : 'deaktivieren';
-    if (confirm(`Möchten Sie diesen Benutzer wirklich ${action}?`)) {
-        // Would implement AJAX call to toggle user status
-        alert('Benutzer-Status-Änderung wird in einer zukünftigen Version implementiert.');
+function updateBulkActionsVisibility() {
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (selectedCustomers.size > 0) {
+        bulkActions.classList.add('show');
+        selectedCount.textContent = selectedCustomers.size;
+    } else {
+        bulkActions.classList.remove('show');
     }
 }
+
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    
+    userCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    
+    updateSelection();
+}
+
+function clearSelection() {
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    
+    userCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    selectAllCheckbox.checked = false;
+    
+    selectedCustomers.clear();
+    updateBulkActionsVisibility();
+}
+
+function applyBulkGroupUpdate() {
+    const newGroup = document.getElementById('bulkGroupSelect').value;
+    
+    if (!newGroup) {
+        alert('Bitte wählen Sie eine Gruppe aus.');
+        return;
+    }
+    
+    if (selectedCustomers.size === 0) {
+        alert('Bitte wählen Sie mindestens einen Benutzer aus.');
+        return;
+    }
+    
+    if (!confirm(`Möchten Sie ${selectedCustomers.size} Benutzer zur Gruppe "${newGroup}" zuweisen?`)) {
+        return;
+    }
+    
+    fetch('{% url "monitoring:bulk_update_user_groups" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            customer_ids: Array.from(selectedCustomers),
+            new_group: newGroup
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ein Fehler ist aufgetreten.');
+    });
+}
+
+function updateSingleUserGroup(customerId, newGroup) {
+    if (!confirm(`Möchten Sie die Benutzergruppe wirklich ändern?`)) {
+        return;
+    }
+    
+    fetch('{% url "monitoring:bulk_update_user_groups" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            customer_ids: [customerId],
+            new_group: newGroup
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ein Fehler ist aufgetreten.');
+    });
+}
+
+function viewCustomerDetails(customerId) {
+    window.open(`/django-admin/core/customer/${customerId}/change/`, '_blank');
+}
+
+function toggleCustomerStatus(customerId, newStatus) {
+    const action = newStatus ? 'aktivieren' : 'deaktivieren';
+    if (!confirm(`Möchten Sie diesen Benutzer wirklich ${action}?`)) {
+        return;
+    }
+    
+    fetch('{% url "monitoring:toggle_customer_status" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            customer_id: customerId,
+            new_status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Fehler: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ein Fehler ist aufgetreten.');
+    });
+}
+
+// CSRF Token setup
+document.addEventListener('DOMContentLoaded', function() {
+    // Add CSRF token to page if not present
+    if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        document.body.appendChild(csrfInput);
+    }
+});
 </script>
 {% endblock %}

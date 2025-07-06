@@ -1,0 +1,467 @@
+{% extends 'base/admin_base.html' %}
+
+{% block title %}Benutzergruppen-Analytik - RENDITEFUCHS Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 4px var(--rf-shadow);
+    }
+    
+    .analytics-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .analytics-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        margin: 0;
+    }
+    
+    .period-selector {
+        padding: 0.5rem;
+        border: 1px solid var(--rf-border);
+        border-radius: 6px;
+        background: var(--rf-bg-primary);
+        color: var(--rf-text-primary);
+    }
+    
+    .group-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .group-stat-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .group-stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .group-stat-card.super-admin::before {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+    
+    .group-stat-card.beta-user::before {
+        background: linear-gradient(90deg, #f97316, #ea580c);
+    }
+    
+    .group-stat-card.user::before {
+        background: linear-gradient(90deg, #3b82f6, #2563eb);
+    }
+    
+    .group-stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .super-admin .group-stat-value {
+        color: #ef4444;
+    }
+    
+    .beta-user .group-stat-value {
+        color: #f97316;
+    }
+    
+    .user .group-stat-value {
+        color: #3b82f6;
+    }
+    
+    .group-stat-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+        margin-bottom: 1rem;
+    }
+    
+    .group-stat-details {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .stat-detail {
+        padding: 0.5rem;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 6px;
+        border: 1px solid var(--rf-border);
+    }
+    
+    .stat-detail-value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+    }
+    
+    .stat-detail-label {
+        font-size: 0.8rem;
+        color: var(--rf-text-secondary);
+        text-transform: uppercase;
+    }
+    
+    .distribution-chart {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 1rem 0;
+    }
+    
+    .bar-chart {
+        display: flex;
+        align-items: end;
+        height: 200px;
+        gap: 1rem;
+        padding: 1rem 0;
+    }
+    
+    .bar {
+        flex: 1;
+        background: var(--rf-primary);
+        border-radius: 4px 4px 0 0;
+        min-height: 10px;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .bar:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px var(--rf-shadow);
+    }
+    
+    .bar-label {
+        position: absolute;
+        bottom: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.8rem;
+        color: var(--rf-text-secondary);
+        text-align: center;
+        width: 100%;
+    }
+    
+    .bar-value {
+        position: absolute;
+        top: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--rf-text-primary);
+    }
+    
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .summary-card {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .summary-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: var(--rf-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .summary-label {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .back-button {
+        background: var(--rf-bg-primary);
+        color: var(--rf-text-primary);
+        border: 1px solid var(--rf-border);
+        text-decoration: none;
+    }
+    
+    .back-button:hover {
+        background: rgba(255, 107, 53, 0.1);
+        color: var(--rf-primary);
+        text-decoration: none;
+    }
+    
+    .activity-timeline {
+        background: var(--rf-bg-primary);
+        border: 1px solid var(--rf-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--rf-border);
+    }
+    
+    .timeline-item:last-child {
+        border-bottom: none;
+    }
+    
+    .timeline-date {
+        font-size: 0.9rem;
+        color: var(--rf-text-secondary);
+        min-width: 100px;
+    }
+    
+    .timeline-content {
+        flex: 1;
+        margin-left: 1rem;
+    }
+    
+    .timeline-group {
+        font-weight: 600;
+        color: var(--rf-text-primary);
+    }
+    
+    .timeline-count {
+        color: var(--rf-text-secondary);
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>Benutzergruppen-Analytik</h1>
+            <p class="text-muted">Detaillierte Analyse der Benutzergruppen-Verteilung und -Aktivität</p>
+        </div>
+        <div class="d-flex gap-2">
+            <select class="period-selector" onchange="changePeriod(this.value)">
+                <option value="7" {% if days_back == 7 %}selected{% endif %}>Letzte 7 Tage</option>
+                <option value="30" {% if days_back == 30 %}selected{% endif %}>Letzte 30 Tage</option>
+                <option value="90" {% if days_back == 90 %}selected{% endif %}>Letzte 90 Tage</option>
+                <option value="365" {% if days_back == 365 %}selected{% endif %}>Letztes Jahr</option>
+            </select>
+            <a href="{% url 'monitoring:user_management' %}" class="btn back-button">
+                <i class="fas fa-arrow-left me-2"></i>Zurück
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="summary-stats">
+        <div class="summary-card">
+            <div class="summary-value">{{ activity_stats.total_users }}</div>
+            <div class="summary-label">Benutzer gesamt</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-value">{{ activity_stats.active_users }}</div>
+            <div class="summary-label">Aktive Benutzer</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-value">{{ activity_stats.new_users_period }}</div>
+            <div class="summary-label">Neue Benutzer ({{ days_back }} Tage)</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-value">
+                {% widthratio activity_stats.active_users activity_stats.total_users 100 %}%
+            </div>
+            <div class="summary-label">Aktivierungsrate</div>
+        </div>
+    </div>
+
+    <!-- Group Statistics Cards -->
+    <div class="group-stats-grid">
+        <!-- Super Admin Card -->
+        <div class="group-stat-card super-admin">
+            <div class="group-stat-value">{{ activity_stats.groups_summary.super_admin.total }}</div>
+            <div class="group-stat-label">Super-Admins</div>
+            <div class="group-stat-details">
+                <div class="stat-detail">
+                    <div class="stat-detail-value">{{ activity_stats.groups_summary.super_admin.active }}</div>
+                    <div class="stat-detail-label">Aktiv</div>
+                </div>
+                <div class="stat-detail">
+                    <div class="stat-detail-value">{{ activity_stats.groups_summary.super_admin.new }}</div>
+                    <div class="stat-detail-label">Neu</div>
+                </div>
+                <div class="stat-detail">
+                    <div class="stat-detail-value">
+                        {% if activity_stats.groups_summary.super_admin.total > 0 %}
+                            {% widthratio activity_stats.groups_summary.super_admin.active activity_stats.groups_summary.super_admin.total 100 %}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </div>
+                    <div class="stat-detail-label">Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Beta User Card -->
+        <div class="group-stat-card beta-user">
+            <div class="group-stat-value">{{ activity_stats.groups_summary.beta_user.total }}</div>
+            <div class="group-stat-label">Beta-User</div>
+            <div class="group-stat-details">
+                <div class="stat-detail">
+                    <div class="stat-detail-value">{{ activity_stats.groups_summary.beta_user.active }}</div>
+                    <div class="stat-detail-label">Aktiv</div>
+                </div>
+                <div class="stat-detail">
+                    <div class="stat-detail-value">{{ activity_stats.groups_summary.beta_user.new }}</div>
+                    <div class="stat-detail-label">Neu</div>
+                </div>
+                <div class="stat-detail">
+                    <div class="stat-detail-value">
+                        {% if activity_stats.groups_summary.beta_user.total > 0 %}
+                            {% widthratio activity_stats.groups_summary.beta_user.active activity_stats.groups_summary.beta_user.total 100 %}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </div>
+                    <div class="stat-detail-label">Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Regular User Card -->
+        <div class="group-stat-card user">
+            <div class="group-stat-value">{{ activity_stats.groups_summary.user.total }}</div>
+            <div class="group-stat-label">Standard-User</div>
+            <div class="group-stat-details">
+                <div class="stat-detail">
+                    <div class="stat-detail-value">{{ activity_stats.groups_summary.user.active }}</div>
+                    <div class="stat-detail-label">Aktiv</div>
+                </div>
+                <div class="stat-detail">
+                    <div class="stat-detail-value">{{ activity_stats.groups_summary.user.new }}</div>
+                    <div class="stat-detail-label">Neu</div>
+                </div>
+                <div class="stat-detail">
+                    <div class="stat-detail-value">
+                        {% if activity_stats.groups_summary.user.total > 0 %}
+                            {% widthratio activity_stats.groups_summary.user.active activity_stats.groups_summary.user.total 100 %}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </div>
+                    <div class="stat-detail-label">Rate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribution Chart -->
+    <div class="distribution-chart">
+        <div class="analytics-header">
+            <h3 class="analytics-title">Gruppenverteilung</h3>
+        </div>
+        <div class="bar-chart">
+            {% for group in group_distribution %}
+            <div class="bar" style="height: {% widthratio group.count activity_stats.total_users 100 %}%;">
+                <div class="bar-value">{{ group.count }}</div>
+                <div class="bar-label">
+                    {% if group.user_group == 'super_admin' %}Super-Admin
+                    {% elif group.user_group == 'beta_user' %}Beta-User
+                    {% else %}User{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Activity Timeline -->
+    {% if recent_registrations %}
+    <div class="activity-timeline">
+        <div class="analytics-header">
+            <h3 class="analytics-title">Registrierungsaktivität</h3>
+        </div>
+        {% regroup recent_registrations by created_at__date as registrations_by_date %}
+        {% for date_group in registrations_by_date %}
+        <div class="timeline-item">
+            <div class="timeline-date">{{ date_group.grouper|date:"d.m.Y" }}</div>
+            <div class="timeline-content">
+                {% for registration in date_group.list %}
+                <div class="timeline-group">
+                    {% if registration.user_group == 'super_admin' %}Super-Admin
+                    {% elif registration.user_group == 'beta_user' %}Beta-User
+                    {% else %}User{% endif %}
+                    <span class="timeline-count">({{ registration.count }} neue Benutzer)</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function changePeriod(days) {
+    const url = new URL(window.location);
+    url.searchParams.set('days', days);
+    window.location.href = url.toString();
+}
+
+// Initialize chart animations
+document.addEventListener('DOMContentLoaded', function() {
+    const bars = document.querySelectorAll('.bar');
+    bars.forEach((bar, index) => {
+        bar.style.animationDelay = `${index * 0.1}s`;
+        bar.style.animation = 'growUp 0.8s ease-out forwards';
+    });
+});
+</script>
+
+<style>
+@keyframes growUp {
+    from {
+        height: 0;
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}

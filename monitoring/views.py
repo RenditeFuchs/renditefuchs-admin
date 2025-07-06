@@ -12,6 +12,10 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.contrib import messages
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_protect
+from core.models import Customer
 
 from .models import (
     Platform, SystemHealth, ErrorLog, Alert, 
@@ -99,6 +103,18 @@ def dashboard_home(request):
                 'uptime_percentage': round((env_online / env_total * 100), 1) if env_total > 0 else 0
             }
 
+    # User group statistics for dashboard
+    user_group_stats = {
+        'total_customers': Customer.objects.count(),
+        'active_customers': Customer.objects.filter(is_active=True).count(),
+        'super_admins': Customer.objects.filter(user_group='super_admin').count(),
+        'beta_users': Customer.objects.filter(user_group='beta_user').count(),
+        'regular_users': Customer.objects.filter(user_group='user').count(),
+        'new_registrations_24h': Customer.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=24)
+        ).count(),
+    }
+
     context = {
         'platform_status': platform_status,
         'platform_groups': platform_groups,
@@ -112,7 +128,8 @@ def dashboard_home(request):
             'total_active_alerts': total_active_alerts,
             'uptime_percentage': round((online_platforms / total_platforms * 100), 1) if total_platforms > 0 else 0
         },
-        'env_stats': env_stats
+        'env_stats': env_stats,
+        'user_group_stats': user_group_stats
     }
     
     return render(request, 'monitoring/dashboard.html', context)
@@ -603,30 +620,69 @@ def system_status_view(request):
 
 @login_required
 def user_management_view(request):
-    """User management overview"""
+    """User management overview with group management"""
     from django.contrib.auth.models import User, Group
     from django.core.paginator import Paginator
     
-    # Get users with pagination
-    users = User.objects.all().order_by('-date_joined')
-    paginator = Paginator(users, 25)
+    # Filter parameters
+    user_group_filter = request.GET.get('user_group', '')
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('search', '')
+    
+    # Get customers (main users) with filtering
+    customers = Customer.objects.all().order_by('-created_at')
+    
+    # Apply filters
+    if user_group_filter:
+        customers = customers.filter(user_group=user_group_filter)
+    
+    if status_filter:
+        if status_filter == 'active':
+            customers = customers.filter(is_active=True)
+        elif status_filter == 'inactive':
+            customers = customers.filter(is_active=False)
+    
+    if search_query:
+        customers = customers.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(customers, 25)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
-    # User statistics
+    # Customer statistics by user group
     user_stats = {
-        'total_users': User.objects.count(),
-        'active_users': User.objects.filter(is_active=True).count(),
-        'staff_users': User.objects.filter(is_staff=True).count(),
-        'superusers': User.objects.filter(is_superuser=True).count(),
-        'recent_logins': User.objects.filter(
-            last_login__gte=timezone.now() - timedelta(days=30)
+        'total_customers': Customer.objects.count(),
+        'active_customers': Customer.objects.filter(is_active=True).count(),
+        'super_admins': Customer.objects.filter(user_group='super_admin').count(),
+        'beta_users': Customer.objects.filter(user_group='beta_user').count(),
+        'regular_users': Customer.objects.filter(user_group='user').count(),
+        'recent_registrations': Customer.objects.filter(
+            created_at__gte=timezone.now() - timedelta(days=30)
         ).count(),
+    }
+    
+    # Group statistics
+    group_stats = {
+        'user': Customer.objects.filter(user_group='user').count(),
+        'beta_user': Customer.objects.filter(user_group='beta_user').count(),
+        'super_admin': Customer.objects.filter(user_group='super_admin').count(),
     }
     
     context = {
         'page_obj': page_obj,
         'user_stats': user_stats,
+        'group_stats': group_stats,
+        'user_group_choices': Customer.USER_GROUP_CHOICES,
+        'current_filters': {
+            'user_group': user_group_filter,
+            'status': status_filter,
+            'search': search_query,
+        },
         'groups': Group.objects.all(),
     }
     
@@ -823,3 +879,162 @@ def error_resolve_api(request, error_id):
     except Exception as e:
         logger.error(f"Error resolve failed: {e}")
         return JsonResponse({'error': 'Internal server error'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def bulk_update_user_groups(request):
+    """Bulk update user groups"""
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        customer_ids = data.get('customer_ids', [])
+        new_group = data.get('new_group', '')
+        
+        if not customer_ids or not new_group:
+            return JsonResponse({'error': 'Customer IDs and new group are required'}, status=400)
+        
+        # Validate group choice
+        valid_groups = [choice[0] for choice in Customer.USER_GROUP_CHOICES]
+        if new_group not in valid_groups:
+            return JsonResponse({'error': 'Invalid group choice'}, status=400)
+        
+        # Update customers
+        updated_count = Customer.objects.filter(id__in=customer_ids).update(user_group=new_group)
+        
+        # Log the change for audit trail
+        for customer_id in customer_ids:
+            SecurityLog.objects.create(
+                event_type='admin_action',
+                severity='info',
+                message=f'User group changed to {new_group} for customer ID {customer_id}',
+                user_id=str(request.user.id),
+                username=request.user.username,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                details={
+                    'action': 'bulk_group_update',
+                    'customer_id': customer_id,
+                    'new_group': new_group,
+                }
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated_count,
+            'message': f'{updated_count} Benutzer erfolgreich aktualisiert'
+        })
+        
+    except Exception as e:
+        logger.error(f"Bulk group update failed: {e}")
+        return JsonResponse({'error': 'Internal server error'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def toggle_customer_status(request):
+    """Toggle customer active status"""
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        customer_id = data.get('customer_id')
+        new_status = data.get('new_status')
+        
+        if customer_id is None or new_status is None:
+            return JsonResponse({'error': 'Customer ID and new status are required'}, status=400)
+        
+        customer = Customer.objects.get(id=customer_id)
+        customer.is_active = new_status
+        customer.save()
+        
+        # Log the change for audit trail
+        SecurityLog.objects.create(
+            event_type='admin_action',
+            severity='info',
+            message=f'Customer status changed to {"active" if new_status else "inactive"} for {customer.email}',
+            user_id=str(request.user.id),
+            username=request.user.username,
+            ip_address=request.META.get('REMOTE_ADDR'),
+            details={
+                'action': 'status_toggle',
+                'customer_id': customer_id,
+                'new_status': new_status,
+                'customer_email': customer.email,
+            }
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Status für {customer.email} erfolgreich geändert',
+            'new_status': new_status
+        })
+        
+    except Customer.DoesNotExist:
+        return JsonResponse({'error': 'Customer not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Status toggle failed: {e}")
+        return JsonResponse({'error': 'Internal server error'}, status=500)
+
+
+@login_required
+def user_group_analytics(request):
+    """User group analytics and statistics"""
+    
+    # Group analytics over time
+    from django.db.models import Count
+    from datetime import datetime, timedelta
+    
+    # Get date range
+    days_back = int(request.GET.get('days', 30))
+    start_date = timezone.now() - timedelta(days=days_back)
+    
+    # User group distribution
+    group_distribution = Customer.objects.values('user_group').annotate(
+        count=Count('id'),
+        active_count=Count('id', filter=Q(is_active=True)),
+        inactive_count=Count('id', filter=Q(is_active=False))
+    ).order_by('user_group')
+    
+    # Recent registrations by group
+    recent_registrations = Customer.objects.filter(
+        created_at__gte=start_date
+    ).values('user_group', 'created_at__date').annotate(
+        count=Count('id')
+    ).order_by('created_at__date')
+    
+    # Activity statistics
+    activity_stats = {
+        'total_users': Customer.objects.count(),
+        'active_users': Customer.objects.filter(is_active=True).count(),
+        'new_users_period': Customer.objects.filter(created_at__gte=start_date).count(),
+        'groups_summary': {
+            'super_admin': {
+                'total': Customer.objects.filter(user_group='super_admin').count(),
+                'active': Customer.objects.filter(user_group='super_admin', is_active=True).count(),
+                'new': Customer.objects.filter(user_group='super_admin', created_at__gte=start_date).count(),
+            },
+            'beta_user': {
+                'total': Customer.objects.filter(user_group='beta_user').count(),
+                'active': Customer.objects.filter(user_group='beta_user', is_active=True).count(),
+                'new': Customer.objects.filter(user_group='beta_user', created_at__gte=start_date).count(),
+            },
+            'user': {
+                'total': Customer.objects.filter(user_group='user').count(),
+                'active': Customer.objects.filter(user_group='user', is_active=True).count(),
+                'new': Customer.objects.filter(user_group='user', created_at__gte=start_date).count(),
+            },
+        }
+    }
+    
+    context = {
+        'group_distribution': group_distribution,
+        'recent_registrations': recent_registrations,
+        'activity_stats': activity_stats,
+        'days_back': days_back,
+        'start_date': start_date,
+    }
+    
+    return render(request, 'monitoring/user_group_analytics.html', context)

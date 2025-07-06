@@ -37,6 +37,11 @@ urlpatterns = [
     
     # User Management  
     path('users/', views.user_management_view, name='user_management'),
+    path('users/analytics/', views.user_group_analytics, name='user_group_analytics'),
+    
+    # User Management API
+    path('api/users/bulk-update-groups/', views.bulk_update_user_groups, name='bulk_update_user_groups'),
+    path('api/users/toggle-status/', views.toggle_customer_status, name='toggle_customer_status'),
     
     # Database Status
     path('database/', views.database_status_view, name='database_status'),

@@ -146,11 +146,11 @@
             <p class="text-muted">Live-Übersicht der System-Performance und Ressourcen</p>
         </div>
         <div class="d-flex gap-2">
-            <button onclick="refreshData()" class="btn btn-outline-primary">
-                <i class="fas fa-sync me-2"></i>Aktualisieren
+            <button onclick="refreshData()" class="btn btn-outline-primary shiny-button">
+                <span class="shiny-text"><i class="fas fa-sync me-2"></i>Aktualisieren</span>
             </button>
-            <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Dashboard
+            <a href="{% url 'monitoring:dashboard' %}" class="btn btn-outline-secondary shiny-button">
+                <span class="shiny-text"><i class="fas fa-arrow-left me-2"></i>Dashboard</span>
             </a>
         </div>
     </div>

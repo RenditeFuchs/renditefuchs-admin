@@ -318,6 +318,99 @@
             </div>
         </div>
     </div>
+    
+    <!-- User Group Statistics Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="modern-card">
+                <div class="card-header bg-transparent border-bottom-0 p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">Benutzergruppen-Übersicht</h5>
+                        <a href="{% url 'monitoring:user_management' %}" class="modern-button secondary">
+                            <i class="fas fa-users me-2"></i>Verwaltung
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body pt-0">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="kpi-card success">
+                                <div class="kpi-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="kpi-value">{{ user_group_stats.total_customers }}</div>
+                                <div class="kpi-label">Benutzer gesamt</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="kpi-card" style="background: linear-gradient(135deg, #fef7f0 0%, #fff1f1 100%); border-color: #fed7d7;">
+                                <div class="kpi-icon" style="background: linear-gradient(135deg, #ef4444, #f87171);">
+                                    <i class="fas fa-crown"></i>
+                                </div>
+                                <div class="kpi-value" style="color: #ef4444;">{{ user_group_stats.super_admins }}</div>
+                                <div class="kpi-label">Super-Admins</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="kpi-card" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #fed7aa;">
+                                <div class="kpi-icon" style="background: linear-gradient(135deg, #f97316, #fb923c);">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                                <div class="kpi-value" style="color: #f97316;">{{ user_group_stats.beta_users }}</div>
+                                <div class="kpi-label">Beta-User</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="kpi-card" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #bfdbfe;">
+                                <div class="kpi-icon" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="kpi-value" style="color: #3b82f6;">{{ user_group_stats.regular_users }}</div>
+                                <div class="kpi-label">Standard-User</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Additional User Statistics -->
+                    <div class="row mt-3">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex justify-content-between align-items-center p-3" style="background: var(--rf-bg-primary); border-radius: 12px; border: 1px solid var(--rf-border);">
+                                <div>
+                                    <div class="fw-bold text-success">{{ user_group_stats.active_customers }}</div>
+                                    <small class="text-muted">Aktive Benutzer</small>
+                                </div>
+                                <div class="text-success">
+                                    {% if user_group_stats.total_customers > 0 %}
+                                        {% widthratio user_group_stats.active_customers user_group_stats.total_customers 100 %}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex justify-content-between align-items-center p-3" style="background: var(--rf-bg-primary); border-radius: 12px; border: 1px solid var(--rf-border);">
+                                <div>
+                                    <div class="fw-bold text-primary">{{ user_group_stats.new_registrations_24h }}</div>
+                                    <small class="text-muted">Neue Registrierungen (24h)</small>
+                                </div>
+                                <div class="text-primary">
+                                    <i class="fas fa-user-plus"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{% url 'monitoring:user_group_analytics' %}" class="modern-button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="fas fa-chart-bar me-2"></i>Detaillierte Analytik
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Modern Platform Status -->
     <div class="row mb-4">
         <div class="col-12">

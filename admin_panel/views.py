@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
@@ -40,3 +40,9 @@ def dashboard_redirect(request):
     if not request.user.is_authenticated:
         return redirect('login')
     return redirect('monitoring:dashboard')
+
+def custom_logout(request):
+    """Custom Logout View with proper redirect"""
+    logout(request)
+    messages.success(request, 'Sie wurden erfolgreich abgemeldet.')
+    return redirect('login')

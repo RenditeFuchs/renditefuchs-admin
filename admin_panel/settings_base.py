@@ -9,6 +9,10 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Add main project to Python path for model imports
+MAIN_PROJECT_PATH = BASE_DIR.parent / 'main'
+sys.path.insert(0, str(MAIN_PROJECT_PATH))
+
 # Django Core Apps
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -20,6 +24,7 @@ INSTALLED_APPS = [
     'admin_panel',
     'monitoring',
     'business',
+    'core',  # Add the main core app
 ]
 
 MIDDLEWARE = [
@@ -80,6 +85,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Database Router Configuration
+# The core app models will be accessed from their own database
+DATABASE_ROUTERS = ['admin_panel.database_router.DatabaseRouter']
 
 # Admin Dashboard Settings
 ADMIN_DASHBOARD_TITLE = 'RenditeFuchs Admin Dashboard'
