@@ -17,13 +17,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
-from .views import custom_login, dashboard_redirect, custom_logout
+from .views import custom_login, dashboard_redirect, custom_logout, dashboard
 
 # Disable Django admin login redirect
 admin.site.login = custom_login
 
 urlpatterns = [
     path('', dashboard_redirect, name='root'),
+    path('dashboard/', dashboard, name='dashboard'),
     path('login/', custom_login, name='login'),
     path('logout/', custom_logout, name='logout'),
     path('django-admin/', admin.site.urls),  # Keep Django admin as fallback

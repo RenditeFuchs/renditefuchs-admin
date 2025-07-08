@@ -1,0 +1,80 @@
+{% extends 'base/admin_base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - {{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">Admin Dashboard</h1>
+            <p class="lead">Willkommen im RENDITEFUCHS Admin-Bereich, {{ user.username }}!</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- Monitoring Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-line"></i> System Monitoring
+                    </h5>
+                    <p class="card-text">Überwachen Sie die Performance und den Status aller RENDITEFUCHS-Plattformen.</p>
+                    <a href="{% url 'monitoring:dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-arrow-right"></i> Zum Monitoring
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Business Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-briefcase"></i> Business Management
+                    </h5>
+                    <p class="card-text">Verwalten Sie Kunden, Rechnungen und Abonnements.</p>
+                    <a href="{% url 'business:dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-arrow-right"></i> Zum Business-Bereich
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Django Admin Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-cogs"></i> Django Administration
+                    </h5>
+                    <p class="card-text">Zugriff auf die Django-Admin-Oberfläche für erweiterte Einstellungen.</p>
+                    <a href="{% url 'admin:index' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-right"></i> Zum Django Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle"></i> Quick Info
+                    </h5>
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-server"></i> Server: {{ request.META.HTTP_HOST }}</li>
+                        <li><i class="fas fa-user"></i> Angemeldet als: {{ user.username }}</li>
+                        <li><i class="fas fa-clock"></i> {% now "d.m.Y H:i" %}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -12,7 +12,7 @@ def custom_login(request):
     """Custom Login View that ACTUALLY WORKS"""
     # Check if user is already logged in
     if request.user.is_authenticated:
-        return redirect('monitoring:dashboard')
+        return redirect('dashboard')
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -35,11 +35,19 @@ def custom_login(request):
     
     return render(request, 'registration/login.html')
 
+@login_required
+def dashboard(request):
+    """Main Dashboard View"""
+    return render(request, 'dashboard.html', {
+        'title': 'Admin Dashboard',
+        'user': request.user,
+    })
+
 def dashboard_redirect(request):
-    """Redirect root to monitoring dashboard"""
+    """Redirect root to main dashboard"""
     if not request.user.is_authenticated:
         return redirect('login')
-    return redirect('monitoring:dashboard')
+    return redirect('dashboard')
 
 def custom_logout(request):
     """Custom Logout View with proper redirect"""
