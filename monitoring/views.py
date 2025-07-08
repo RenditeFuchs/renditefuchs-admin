@@ -15,7 +15,11 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
-from core.models import Customer
+try:
+    from core.models import Customer
+except ImportError:
+    # For development when core module is not available
+    Customer = None
 
 from .models import (
     Platform, SystemHealth, ErrorLog, Alert, 

@@ -36,8 +36,31 @@ staticfiles/
 .env.production
 .env.test
 
-# Local development settings - NEVER push to server!
-admin_panel/settings_local.py
+# Environment-specific files - NEVER push to server!
+*_local.*
+*-local.*
+*.local
+start_*_local.sh
+nginx_local.conf
+ssl_certs/
+
+# Server-only files (auto-managed by deployment)
+*_production.*
+*-production.*
+*_server.*
+*-server.*
+deploy_*_server.py
+deploy_*_after_pull.py
+.env_server
+.env_production
+.env_test
+
+# Development environment files
+.env.local
+.env.development
+settings_local.py
+start_admin.sh
+start_*_local.sh
 admin_db_local.sqlite3
 
 # Virtual Environment
@@ -79,5 +102,48 @@ htmlcov/
 *.sock
 .vagrant/
 
-# Local development scripts - NEVER push to server!
-start_admin.sh
+# Editor backup files
+*~
+*.orig
+*.rej
+*.swp
+*.swo
+*#
+*.kate-swp
+.#*
+\#*#
+.*.swp
+.*.swo
+*.autosave
+
+# Testing and debugging files
+debug_*
+test_*
+*_test.*
+*.test
+testing/
+debug/
+profile_*
+*.prof
+
+# Runtime files
+*.daemon
+*.socket
+*.lock
+*.run
+
+# Performance monitoring
+*.stat
+*.stats
+performance_*
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+tmp/
+temp/
